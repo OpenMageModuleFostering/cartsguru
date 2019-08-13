@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Cartsguru>
+            <active>true</active>
+            <codePool>local</codePool>
+        </Cartsguru>
+    </modules>
+</config>
