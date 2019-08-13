@@ -3,7 +3,7 @@
     <!-- plugin name -->
     <modules>
         <Cartsguru>
-            <version>1.2.4</version>
+            <version>1.2.5</version>
         </Cartsguru>
     </modules>
     <global>
@@ -117,15 +117,6 @@
                     </cartsguru_sales_quote_save_after>
                 </observers>
             </sales_quote_save_after>
-            <customer_login>
-                <observers>
-                    <customer_login>
-                        <type>singleton</type>
-                        <class>cartsguru/observer</class>
-                        <method>productAddAfter</method>
-                    </customer_login>
-                </observers>
-            </customer_login>
         </events>
     </global>
     <adminhtml>

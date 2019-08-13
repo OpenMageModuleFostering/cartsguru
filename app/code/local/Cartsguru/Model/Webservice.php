@@ -419,7 +419,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.4',
+            'pluginVersion'         => '1.2.5',
             'storeVersion'          => Mage::getVersion()
         );
 
