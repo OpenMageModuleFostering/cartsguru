@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
     <name>cartsguru</name>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <stability>stable</stability>
     <license uri="http://opensource.org/licenses/gpl-license.php">GPL</license>
     <channel>community</channel>
@@ -18,12 +18,11 @@ Effortlessly reduce the number of abandoned shopping carts by automating telepho
 &#xD;
 - SMS Callback &amp;amp; Push SMS&#xD;
 Send to your prospective customers having abandoned a cart, an SMS suggesting a free call back from your customer relations service, a straightforward SMS reminder or an SMS offering a personalized discount</description>
-    <notes>- Add recovery cart link&#xD;
-- Fix send gender in some cases</notes>
+    <notes>- Improve order tracking</notes>
     <authors><author><name>Maxime Pruvost</name><user>cgmaximepruvost</user><email>maxime@carts.guru</email></author></authors>
     <date>2016-04-26</date>
-    <time>10:17:24</time>
-    <contents><target name="magelocal"><dir name="Cartsguru"><dir name="Helper"><file name="Data.php" hash="f6590d08ba862a169ce43459ddb1193c"/><file name="Tools.php" hash="612133db113c08e7de7ab94a86d23e34"/></dir><dir name="Model"><file name="Observer.php" hash="7b3b398b86a9b8e044f7d00f6b72e196"/><file name="Webservice.php" hash="93ff6cdb037cb3f31d0a85f0a97e7a64"/></dir><dir name="controllers"><file name="IndexController.php" hash="108acaab218e2a5e79a12677f83ebc29"/><file name="RecovercartController.php" hash="c5272eaae6eba7658155a83c27b94139"/></dir><dir name="etc"><file name="config.xml" hash="6ed9edede663e2400ac8fd5f2706179e"/><file name="system.xml" hash="cb0fbf86d2be47dbd719739ee79c4cba"/></dir><dir name="sql"><dir name="cartsguru_setup"><file name="install-1.0.0.php" hash="c46126ce8ce549d525fb25bddc5090b5"/><file name="install-1.2.0.php" hash="112bd2a1d4e02dd1f296ef47e54e0485"/><file name="upgrade-1.0.0-1.2.0.php" hash="112bd2a1d4e02dd1f296ef47e54e0485"/></dir></dir></dir></target><target name="magelocale"><dir name="fr_FR"><file name="CartsGuru.csv" hash="b6d51893c33ddef1d53372d3a23b036c"/></dir><dir name="en_US"><file name="CartsGuru.csv" hash="921cb4133db47471456759443bb269f5"/></dir></target><target name="mageetc"><dir name="modules"><file name="Cartsguru.xml" hash="32bfa7d63b1a5b6b8f7977bf31af4e28"/></dir></target></contents>
+    <time>15:35:58</time>
+    <contents><target name="magelocal"><dir name="Cartsguru"><dir name="Helper"><file name="Data.php" hash="f6590d08ba862a169ce43459ddb1193c"/><file name="Tools.php" hash="612133db113c08e7de7ab94a86d23e34"/></dir><dir name="Model"><file name="Observer.php" hash="7b3b398b86a9b8e044f7d00f6b72e196"/><file name="Webservice.php" hash="3579906d1db676e6aab7ccf1f3a9a46e"/></dir><dir name="controllers"><file name="IndexController.php" hash="108acaab218e2a5e79a12677f83ebc29"/><file name="RecovercartController.php" hash="c5272eaae6eba7658155a83c27b94139"/></dir><dir name="etc"><file name="config.xml" hash="33653d64090426d708a54a2e01b9bd78"/><file name="system.xml" hash="cb0fbf86d2be47dbd719739ee79c4cba"/></dir><dir name="sql"><dir name="cartsguru_setup"><file name="install-1.2.0.php" hash="112bd2a1d4e02dd1f296ef47e54e0485"/><file name="install-1.2.1.php" hash="112bd2a1d4e02dd1f296ef47e54e0485"/><file name="upgrade-1.0.0-1.2.0.php" hash="112bd2a1d4e02dd1f296ef47e54e0485"/></dir></dir></dir></target><target name="magelocale"><dir name="fr_FR"><file name="CartsGuru.csv" hash="b6d51893c33ddef1d53372d3a23b036c"/></dir><dir name="en_US"><file name="CartsGuru.csv" hash="921cb4133db47471456759443bb269f5"/></dir></target><target name="mageetc"><dir name="modules"><file name="Cartsguru.xml" hash="32bfa7d63b1a5b6b8f7977bf31af4e28"/></dir></target></contents>
     <compatible/>
     <dependencies><required><php><min>5.3.0</min><max>6.0.0</max></php></required></dependencies>
 </package>

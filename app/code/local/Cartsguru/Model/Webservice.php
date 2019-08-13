@@ -159,7 +159,7 @@ class Cartsguru_Model_Webservice
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
             'totalET'       => (float)$order->getSubtotal(),                                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => $this->getTotalATI($items),                                      // Amount included taxes and excluded shipping
+            'totalATI'      => (float)$order->getGrandTotal(),                                         // Paid amount
             'state'         => $order->getStatus(),                                             // raw order status
             'accountId'     => $email,                                                      // Account id of the buyer
             'ip'            => $order->getRemoteIp(),                                           // User IP
@@ -251,14 +251,15 @@ class Cartsguru_Model_Webservice
         }
         
         //Recover link
-        $recoverUrl = Mage::getBaseUrl() . 'cartsguru/recovercart?cart_id=' . $quote->getId() . '&cart_token=' . $quote->getData('cartsguru_token');
-        
+        $recoverUrl = ($quote->getData('cartsguru_token')) ?
+                        Mage::getBaseUrl() . 'cartsguru/recovercart?cart_id=' . $quote->getId() . '&cart_token=' . $quote->getData('cartsguru_token') :
+                        '';
         
         //Items details
         $items = $this->getItemsData($quote);
 
         //Check is valid
-        if (!$items || (!$phone || !$email)) {
+        if (sizeof($items) == 0) {
             return;
         }
         
@@ -395,7 +396,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid') . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.0',
+            'pluginVersion'         => '1.2.1',
             'storeVersion'          => Mage::getVersion()
         );
 
