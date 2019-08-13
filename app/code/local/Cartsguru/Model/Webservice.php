@@ -447,7 +447,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.7',
+            'pluginVersion'         => '1.2.8',
             'storeVersion'          => Mage::getVersion()
         );
 
@@ -478,7 +478,7 @@ class Cartsguru_Model_Webservice
     }
     
     private function sendLastOrders($store){
-        $orders = [];
+        $orders = array();
         $last = null;
         $items = Mage::getModel('sales/order')
                     ->getCollection()
@@ -530,7 +530,7 @@ class Cartsguru_Model_Webservice
     }
     
     private function sendLastQuotes($store, $since){
-        $quotes = [];
+        $quotes = array();
         $last = null;
         $items = Mage::getModel('sales/quote')
                 ->getCollection()
