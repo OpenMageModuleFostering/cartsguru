@@ -24,7 +24,8 @@ class Cartsguru_Model_Observer
      */
     public function orderSaveAfter($observer)
     {
-        Mage::getModel('cartsguru/webservice')->sendOrder($observer->getOrder());
+        $order = $observer->getOrder();
+        Mage::getModel('cartsguru/webservice')->sendOrder($order);
     }
 
     /**
@@ -33,19 +34,6 @@ class Cartsguru_Model_Observer
      */
     public function quoteSaveBefore($observer)
     {
-        $quote = $observer->getQuote();
-        $request = Mage::app()->getRequest()->getParams();
-        $cache = Mage::app()->getCache();
-
-        if (isset($request['billing'])) {
-            if (isset($request['billing']['telephone'])) {
-                $quote->setTelephone($request['billing']['telephone']);
-            }
-
-            if (isset($request['billing']['country_id'])) {
-                $quote->setData('country', $request['billing']['country_id']);
-            }
-        }
     }
 
     /**
@@ -54,34 +42,17 @@ class Cartsguru_Model_Observer
      */
     public function customerSaveAfter($observer)
     {
-        Mage::getModel('cartsguru/webservice')->sendAccount($observer->getCustomer());
-    }
-
-    public function productAddAfter($observer)
-    {
-        $quote = Mage::getModel('checkout/session')->getQuote();
-        $customer = $quote->getCustomer();
-        if (isset($customer)) {
-            $billingAddress = $customer->getDefaultBillingAddress();
-            if ($billingAddress) {
-                if (empty($quote->getTelephone())) {
-                    $quote->setTelephone($billingAddress->getTelephone());
-                }
-                if (empty($quote->getCountry())) {
-                    $quote->setData('country', $billingAddress->getCountryId());
-                }
-            }
-        }
-
-        Mage::getModel('cartsguru/webservice')->sendAbadonnedCart($quote);
+        $customer = $observer->getCustomer();
+        Mage::getModel('cartsguru/webservice')->sendAccount($customer);
     }
 
     /**
-     * This method set telephone in session
+     * This method - hook for quote save api call
+     * @param $observer
      */
-    public function setTelephoneInSession()
+    public function productAddAfter($observer)
     {
-        $telephone = Mage::app()->getRequest()->getParams()['billing']['telephone'];
-        Mage::getSingleton("core/session")->setData("telephone", $telephone);
+        $quote = Mage::getModel('checkout/session')->getQuote();
+        Mage::getModel('cartsguru/webservice')->sendAbadonnedCart($quote);
     }
 }
