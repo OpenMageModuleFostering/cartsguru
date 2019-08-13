@@ -9,7 +9,27 @@ class Cartsguru_Model_Webservice
     private $apiBaseUrl = 'https://api.carts.guru';
     private $configBasePath = 'cartsguru/cartsguru_group/';
 
-    public function setStoreConfig($key, $value, $store = null)
+    protected function getStoreFromAdmin(){
+        $store_id;
+        if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
+        {
+            $store_id = Mage::getModel('core/store')->load($code)->getId();
+        }
+        elseif (strlen($code = Mage::getSingleton('adminhtml/config_data')->getWebsite())) // website level
+        {
+            $website_id = Mage::getModel('core/website')->load($code)->getId();
+            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
+        }
+
+        if ($store_id){
+            return Mage::app()->getStore($store_id);
+        }
+        else {
+            return null;
+        }
+    }
+    
+    protected function setStoreConfig($key, $value, $store = null)
     {
         if (!$store){
             $store = Mage::app()->getStore();
@@ -262,7 +282,7 @@ class Cartsguru_Model_Webservice
         $items = $this->getItemsData($quote);
 
         //Check is valid
-        if (sizeof($items) == 0) {
+        if (!$email || sizeof($items) == 0) {
             return;
         }
         
@@ -396,14 +416,16 @@ class Cartsguru_Model_Webservice
      */
     public function checkAddress()
     {
-        $requestUrl = '/sites/' . $this->getStoreConfig('siteid') . '/register-plugin';
+        $store = $this->getStoreFromAdmin();
+        
+        $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.2',
+            'pluginVersion'         => '1.2.3',
             'storeVersion'          => Mage::getVersion()
         );
 
-        $response = $this->doPostRequest($requestUrl, $fields);
+        $response = $this->doPostRequest($requestUrl, $fields, $store);
         $isSuccess = ($response)?
                 ($response->getStatus() == 200)
                 : false;
@@ -418,12 +440,12 @@ class Cartsguru_Model_Webservice
      * @param $fields
      * @return Zend_Http_Response
      */
-    protected function doPostRequest($apiPath, $fields)
+    protected function doPostRequest($apiPath, $fields, $store=null)
     {
         try {
             $url = $this->apiBaseUrl . $apiPath;
             $client = new Zend_Http_Client($url);
-            $client->setHeaders('x-auth-key', $this->getStoreConfig('auth'));
+            $client->setHeaders('x-auth-key', $this->getStoreConfig('auth', $store));
             $client->setUri($url);
             $client->setRawData(json_encode($fields), 'application/json');
             $response = $client->request(Zend_Http_Client::POST);
