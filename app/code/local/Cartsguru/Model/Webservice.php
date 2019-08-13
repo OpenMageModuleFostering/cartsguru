@@ -16,7 +16,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.3.4';
+    const _CARTSGURU_VERSION_ = '1.3.5';
 
     public function isStoreConfigured($store = null)
     {
@@ -99,8 +99,8 @@ class Cartsguru_Model_Webservice
 
         $image = null;
 
-        //Handle 1.9.0 feature
-        if (version_compare(Mage::getVersion(), '1.9.0', '>=')) {
+        //Handle 1.9.1 feature
+        if (version_compare(Mage::getVersion(), '1.9.1', '>=')) {
             //Check if need resize or not
             if (Mage::getStoreConfig(Mage_Catalog_Helper_Image::XML_NODE_PRODUCT_SMALL_IMAGE_WIDTH) < 120) {
                 $image = Mage::helper('catalog/image')->init($product, 'image')->resize(120, 120);
