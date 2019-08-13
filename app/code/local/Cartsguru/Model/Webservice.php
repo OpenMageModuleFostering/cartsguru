@@ -165,7 +165,7 @@ class Cartsguru_Model_Webservice
         $baseUrl = Mage::getBaseUrl() . 'api/rest';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.1.0',
+            'pluginVersion'         => '1.1.1',
             'storeVersion'          => Mage::getVersion()
         );
         $siteId = Mage::getStoreConfig('cartsguru/cartsguru_group/siteid', Mage::app()->getStore());
@@ -373,7 +373,7 @@ class Cartsguru_Model_Webservice
         $firstname = $this->getFirstname($customer);
         $phone = '';
         $country = '';
-        $address = Mage::getModel('customer/address')->load($customer->getDefaultBillingAddress());
+        $address = $customer->getDefaultBillingAddress();
         if ($address) {
             $phone = $address->getTelephone();
             $country = $address->getCountryId();
