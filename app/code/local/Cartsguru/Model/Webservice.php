@@ -17,7 +17,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.2.14';
+    const _CARTSGURU_VERSION_ = '1.2.16';
 
     protected function getStoreFromAdmin(){
         $store_id = null;
@@ -219,6 +219,7 @@ class Cartsguru_Model_Webservice
      */
     public function getOrderData($order, $store = null)
     {
+        $helper = Mage::helper('cartsguru');
         //Order must have a status
         if (!$order->getStatus()){
             return null;
@@ -233,6 +234,13 @@ class Cartsguru_Model_Webservice
 
         //Items details
         $items = $this->getItemsData($order);
+
+        // Custom fields
+        $custom = array(
+            'language' => $helper->getBrowserLanguage(),
+            'customerGroup' => $helper->getCustomerGroupName(),
+            'isNewCustomer' => $helper->isNewCustomer($email)
+        );
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
@@ -252,7 +260,8 @@ class Cartsguru_Model_Webservice
             'email'         => $this->notEmpty($email),                                         // Email of the buye
             'phoneNumber'   => $this->notEmpty($address->getTelephone()),                       // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($address->getCountryId()),                       // Country code of buyer
-            'items'         => $items                                                           // Details
+            'items'         => $items,                                                          // Details
+            'custom'        => $custom                                                          // Custom fields array
         );
     }
 
@@ -270,7 +279,7 @@ class Cartsguru_Model_Webservice
         }
 
         //Get data, stop if none
-        $orderData = $this->getOrderData($order,$store);
+        $orderData = $this->getOrderData($order, $store);
         if (empty($orderData)) {
             return;
         }
@@ -302,6 +311,7 @@ class Cartsguru_Model_Webservice
      */
     public function getAbadonnedCartData($quote, $store = null)
     {
+        $helper = Mage::helper('cartsguru');
         //Customer data
         $gender = $this->genderMapping($quote->getCustomerGender());
 
@@ -326,7 +336,7 @@ class Cartsguru_Model_Webservice
             }
         }
 
-        if ($address){
+        if ($address) {
             if (!$phone){
                 $phone = $address->getTelephone();
             }
@@ -335,7 +345,7 @@ class Cartsguru_Model_Webservice
             }
         }
 
-        if ($customer){
+        if ($customer) {
             $customerAddress = $customer->getDefaultBillingAddress();
 
             if ($customerAddress && !$phone){
@@ -345,6 +355,13 @@ class Cartsguru_Model_Webservice
                 $country = $customerAddress->getCountryId();
             }
         }
+
+        // Custom fields
+        $custom = array(
+            'language' => $helper->getBrowserLanguage(),
+            'customerGroup' => $helper->getCustomerGroupName(),
+            'isNewCustomer' => $helper->isNewCustomer($email)
+        );
 
         //Recover link
         $recoverUrl = ($quote->getData('cartsguru_token')) ?
@@ -375,7 +392,8 @@ class Cartsguru_Model_Webservice
             'phoneNumber'   => $this->notEmpty($phone),                         // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($country),                       // Country code of the buyer
             'recoverUrl'    => $recoverUrl,                                     // Direct link to recover the cart
-            'items'         => $items                                           // Details
+            'items'         => $items,                                          // Details
+            'custom'        => $custom                                          // Custom fields array
         );
     }
 
@@ -466,7 +484,7 @@ class Cartsguru_Model_Webservice
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),     // SiteId is part of plugin configuration
-            'accountId'     => $customer->getId(),                          // Account id of the customer
+            'accountId'     => $customer->getEmail(),                          // Account id of the customer
             'civility'      => $gender,                                     // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($lastname),                  // Lastname of the buyer
             'firstname'     => $this->notEmpty($firstname),                 // Firstname of the buyer

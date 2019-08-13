@@ -38,6 +38,7 @@
         var data = [];
         for (var item in fields) {
             if (fields.hasOwnProperty(item)) {
+                // Only if email is set
                 if (item === 'email' && fields[item].value === '') {
                     return false;
                 }
