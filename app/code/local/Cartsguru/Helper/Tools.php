@@ -3,14 +3,16 @@
 /**
  * Class Cartsguru_Helper_Tools
  */
-class Cartsguru_Helper_Tools {
+class Cartsguru_Helper_Tools
+{
 
 /**
  * This method generate a random uuid v4
  * @param $customer
  */
-  public static function generateUUID() {
-    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+  public static function generateUUID()
+  {
+      return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
 
       // 32 bits for "time_low"
       mt_rand(0, 0xffff), mt_rand(0, 0xffff),

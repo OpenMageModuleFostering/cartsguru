@@ -21,13 +21,13 @@ class Cartsguru_Model_Observer
 
         $result = $webservice->checkAddress();
 
-        if ($result == false){
+        if ($result == false) {
             return $session->addError('Error check connection');
         }
 
         $session->addSuccess('Connection checked');
 
-        if ($result->isNew){
+        if ($result->isNew) {
             $webservice->sendHistory();
         }
 
@@ -58,9 +58,9 @@ class Cartsguru_Model_Observer
 
         Mage::log('Observer: Start handle quoteSaveBefore for ' . $quote->getId(), null, Cartsguru_Model_Observer::LOG_FILE);
 
-        if (!$quote->getData('cartsguru_token')){
+        if (!$quote->getData('cartsguru_token')) {
             $tools = Mage::helper('cartsguru/tools');
-            $quote->setData('cartsguru_token',$tools::generateUUID());
+            $quote->setData('cartsguru_token', $tools::generateUUID());
         }
 
         Mage::log('Observer: End handle quoteSaveBefore for ' . $quote->getId(), null, Cartsguru_Model_Observer::LOG_FILE);
@@ -85,7 +85,8 @@ class Cartsguru_Model_Observer
      * Handle order updated, and push it to carts guru
      * @param $observer
      */
-    public function orderSaveAfter($observer) {
+    public function orderSaveAfter($observer)
+    {
         /* @var Mage_Sales_Model_Order $order */
         $order = $observer->getOrder();
 
@@ -97,14 +98,15 @@ class Cartsguru_Model_Observer
             Mage::getModel('cartsguru/webservice')->sendOrder($order);
         }
 
-         Mage::log('Observer: End handle orderSaveAfter for ' . $order->getIncrementId(), null, Cartsguru_Model_Observer::LOG_FILE);
+        Mage::log('Observer: End handle orderSaveAfter for ' . $order->getIncrementId(), null, Cartsguru_Model_Observer::LOG_FILE);
     }
 
     /**
      * Saves added product data to fire FB pixel
      * @param $observer
      */
-    public function checkoutCartAdd($observer) {
+    public function checkoutCartAdd($observer)
+    {
         $helper = Mage::helper('cartsguru');
         $facebook_enabled = $helper->getStoreConfig("feature_facebook");
         if ($facebook_enabled) {
@@ -133,7 +135,8 @@ class Cartsguru_Model_Observer
      * Check if we have source query param ans set the cookie
      * @param $observer
      */
-    public function checkSource($observer) {
+    public function checkSource($observer)
+    {
         $utm_source = Mage::app()->getRequest()->getParam('utm_source');
         $utm_campaign = Mage::app()->getRequest()->getParam('utm_campaign');
         if ($utm_source && $utm_campaign) {

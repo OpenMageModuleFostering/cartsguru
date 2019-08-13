@@ -4,7 +4,8 @@
 * This class generates catalog feed for Facebook
 * Class Cartsguru_Model_Catalog
 */
-class Cartsguru_Model_Catalog {
+class Cartsguru_Model_Catalog
+{
 
     /**
     * The fields to be put into the feed.
@@ -89,6 +90,17 @@ class Cartsguru_Model_Catalog {
     public function processProduct($args)
     {
         $product = Mage::getModel('catalog/product')->load($args['row']['entity_id']);
+        // check if configurable product and has issues with attributes
+        if ($product->isConfigurable()) {
+            $product->getTypeInstance(true)->setStoreFilter($product->getStore(), $product);
+            $attributes = $product->getTypeInstance(true)->getConfigurableAttributes($product);
+            foreach ($attributes as $attribute) {
+                $attribute = $attribute->getProductAttribute();
+                if (empty($attribute)) {
+                    return;
+                }
+            }
+        }
 
         $product_data = array();
         $attributes = $this->_attributes;
@@ -162,7 +174,7 @@ class Cartsguru_Model_Catalog {
                 break;
 
                 case 'sale_price':
-                if($value && $value != ''){
+                if ($value && $value != '') {
                     $safeString = sprintf('%.2f', $store->convertPrice($value, false, false)).' '.Mage::getStoreConfig('currency/options/default', $store->getStoreId());
                 }
                 break;

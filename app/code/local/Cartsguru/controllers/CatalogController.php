@@ -1,7 +1,7 @@
 <?php
 
-class Cartsguru_CatalogController extends Mage_Core_Controller_Front_Action {
-
+class Cartsguru_CatalogController extends Mage_Core_Controller_Front_Action
+{
     public function indexAction()
     {
         $helper = Mage::helper('cartsguru');

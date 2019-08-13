@@ -61,26 +61,22 @@ class Cartsguru_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     // Get store from admin
-    public function getStoreFromAdmin(){
+    public function getStoreFromAdmin()
+    {
         $store_id = null;
-        if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
-        {
+        if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) { // store level
             $store_id = Mage::getModel('core/store')->load($code)->getId();
-        }
-        elseif (strlen($code = Mage::getSingleton('adminhtml/config_data')->getWebsite())) // website level
-        {
+        } elseif (strlen($code = Mage::getSingleton('adminhtml/config_data')->getWebsite())) { // website level
             $website_id = Mage::getModel('core/website')->load($code)->getId();
             $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
-        }
-        elseif (strlen($code = Mage::app()->getRequest()->getParam('website'))) {
+        } elseif (strlen($code = Mage::app()->getRequest()->getParam('website'))) {
             $website_id = Mage::getModel('core/website')->load($code)->getId();
             $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
         }
 
-        if ($store_id){
+        if ($store_id) {
             return Mage::app()->getStore($store_id);
-        }
-        else {
+        } else {
             return Mage::app()->getStore();
         }
     }
@@ -88,15 +84,16 @@ class Cartsguru_Helper_Data extends Mage_Core_Helper_Abstract
     // Save config in store
     public function setStoreConfig($key, $value, $store = null)
     {
-        if (!$store){
+        if (!$store) {
             $store = Mage::app()->getStore();
         }
 
         Mage::getConfig()->saveConfig($this->configBasePath . $key, $value, 'stores', $store->getStoreId());
     }
     // Get store config
-    public function getStoreConfig($key, $store = null){
-        if (!$store){
+    public function getStoreConfig($key, $store = null)
+    {
+        if (!$store) {
             $store = Mage::app()->getStore();
         }
 

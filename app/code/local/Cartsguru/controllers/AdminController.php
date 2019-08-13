@@ -1,13 +1,14 @@
 <?php
 
-class Cartsguru_AdminController extends Mage_Core_Controller_Front_Action {
-
-    public function indexAction() {
+class Cartsguru_AdminController extends Mage_Core_Controller_Front_Action
+{
+    public function indexAction()
+    {
         $helper = Mage::helper('cartsguru');
         $params = $this->getRequest()->getParams();
         $auth_key = $helper->getStoreConfig('auth');
         // Stop if no enoguth params
-        if (!isset($params['cartsguru_admin_action']) || !isset($params['cartsguru_auth_key']) || $auth_key !== $params['cartsguru_auth_key']){
+        if (!isset($params['cartsguru_admin_action']) || !isset($params['cartsguru_auth_key']) || $auth_key !== $params['cartsguru_auth_key']) {
             die;
         }
         // Toggle features action

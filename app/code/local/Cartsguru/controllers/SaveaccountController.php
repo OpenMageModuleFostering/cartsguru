@@ -1,22 +1,23 @@
 <?php
 
-class Cartsguru_SaveaccountController extends Mage_Core_Controller_Front_Action {
-
-    public function indexAction() {
+class Cartsguru_SaveaccountController extends Mage_Core_Controller_Front_Action
+{
+    public function indexAction()
+    {
         // Get request params
         $params = $this->getRequest()->getParams();
 
         // Stop if no email
-        if (!isset($params['email'])){
+        if (!isset($params['email'])) {
             return;
         }
         // Post the data
         $quote = Mage::getModel('checkout/cart')->getQuote();
         $quote->setCustomerEmail($params['email']);
-        if (isset($params['firstname'])){
+        if (isset($params['firstname'])) {
             $quote->setCustomerFirstname($params['firstname']);
         }
-        if (isset($params['lastname'])){
+        if (isset($params['lastname'])) {
             $quote->setCustomerLastname($params['lastname']);
         }
         $address = $quote->getBillingAddress();
