@@ -17,6 +17,8 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
+    const _CARTSGURU_VERSION_ = '1.2.14';
+
     protected function getStoreFromAdmin(){
         $store_id = null;
         if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
@@ -129,6 +131,29 @@ class Cartsguru_Model_Webservice
         return $totalATI;
     }
 
+    protected function getProudctImageUrl($product){
+        if ($product->getImage() == 'no_selection' || !$product->getImage()){
+            return $imageUrl = $this->notEmpty(null);
+        }
+
+        $image = null;
+
+        //Handle 1.9.0 feature
+        if (version_compare(Mage::getVersion(), '1.9.0', '>=')){
+            //Check if need resize or not
+            if (Mage::getStoreConfig(Mage_Catalog_Helper_Image::XML_NODE_PRODUCT_SMALL_IMAGE_WIDTH) < 120){
+                $image = Mage::helper('catalog/image')->init($product, 'image')->resize(120,120);
+            }
+            else {
+                $image = Mage::helper('catalog/image')->init($product, 'small_image');
+            }
+        } else {
+            $image = Mage::helper('catalog/image')->init($product, 'small_image');
+        }
+
+        return (string)$image;
+    }
+
     /**
      * This method build items from order or quote
      * @param $obj order or quote
@@ -145,18 +170,11 @@ class Cartsguru_Model_Webservice
             if (!$productData) {
                 $product = Mage::getModel('catalog/product')->load($item->getProductId());
 
-                if ($product->getImage() == 'no_selection' || !$product->getImage()){
-                    $imageUrl = $this->notEmpty(null);
-                }
-                else {
-                    $imageUrl = $product->getSmallImageUrl(120, 120);
-                }
-
                 $categoryNames = $this->getCatNames($product);
 
                 $productData = array(
                     'url'       => $product->getProductUrl(),           // URL of product sheet
-                    'imageUrl'  => $imageUrl,                           // URL of product image
+                    'imageUrl'  => $this->getProudctImageUrl($product), // URL of product image
                     'universe'  => $this->notEmpty($categoryNames[1]),  // Main category
                     'category'  => $this->notEmpty(end($categoryNames)) // Child category
                 );
@@ -476,11 +494,11 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.13',
+            'pluginVersion'         => Cartsguru_Model_Webservice::_CARTSGURU_VERSION_,
             'storeVersion'          => Mage::getVersion()
         );
 
-        $response = $this->doPostRequest($requestUrl, $fields, $store);
+        $response = $this->doPostRequest($requestUrl, $fields, $store, true);
 
         if (!$response || $response->getStatus() != 200){
             return false;
@@ -575,12 +593,19 @@ class Cartsguru_Model_Webservice
      * @param $fields
      * @return Zend_Http_Response
      */
-    private function doPostRequest($apiPath, $fields, $store=null)
+    private function doPostRequest($apiPath, $fields, $store=null, $isSync=false)
     {
+        $response = null;
+
         try {
             $url = $this->apiBaseUrl . $apiPath;
-            $client = new Zend_Http_Client($url);
+            $options = array(
+                'storeresponse' => false,           //We don't need store the response for later
+                'timeout'      => $isSync ? 10 : 1  //We need only wait if is sync, seconds as integer
+            );
+            $client = new Zend_Http_Client($url, $options);
             $client->setHeaders('x-auth-key', $this->getStoreConfig('auth', $store));
+            $client->setHeaders('x-plugin-version', Cartsguru_Model_Webservice::_CARTSGURU_VERSION_);
             $client->setUri($url);
             $client->setRawData(json_encode($fields), 'application/json');
             $response = $client->request(Zend_Http_Client::POST);
