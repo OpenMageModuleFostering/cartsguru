@@ -7,7 +7,6 @@
 class Cartsguru_Model_Webservice
 {
     private $apiBaseUrl = 'https://api.carts.guru';
- 
     /**
      * If value is empty return ''
      * @param $value
@@ -62,8 +61,14 @@ class Cartsguru_Model_Webservice
      * @param $obj order or quote
      * @return float
      */
-    public function getTotalATI($obj){
-        return (float)$obj->getGrandTotal() - (float)$obj->getShippingAmount() - (float)$obj->getShippingTaxAmount();
+    public function getTotalATI($items){
+        $totalATI = (float)0;
+        
+        foreach ($items as $item) {
+            $totalATI += $item['totalATI'];
+        }
+        
+        return $totalATI;
     }
         
     /**
@@ -124,6 +129,9 @@ class Cartsguru_Model_Webservice
         
         //Address
         $address = $order->getBillingAddress();
+        
+        //Items details
+        $items = $this->getItemsData($order);
 
         return array(
             'siteId'        => Mage::getStoreConfig('cartsguru/cartsguru_group/siteid', Mage::app()->getStore()),   //Site Id
@@ -131,7 +139,7 @@ class Cartsguru_Model_Webservice
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
             'totalET'       => (float)$order->getSubtotal(),                                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => $this->getTotalATI($order),                                      // Amount included taxes and excluded shipping
+            'totalATI'      => $this->getTotalATI($items),                                      // Amount included taxes and excluded shipping
             'state'         => $order->getStatus(),                                             // raw order status
             'accountId'     => $accountId,                                                      // Account id of the buyer
             'ip'            => $order->getRemoteIp(),                                           // User IP
@@ -141,7 +149,7 @@ class Cartsguru_Model_Webservice
             'email'         => $this->notEmpty($email),                                        // Email of the buye
             'phoneNumber'   => $this->notEmpty($address->getTelephone()),                       // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($address->getCountryId()),                       // Country code of buyer
-            'items'         => $this->getItemsData($order)                                      // Details
+            'items'         => $items                                                           // Details
         );
     }
 
@@ -226,7 +234,7 @@ class Cartsguru_Model_Webservice
             'id'            => $quote->getId(),                                 //Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($quote->getCreatedAt()),       // Date of the order as string in json format
             'totalET'       => (float)$quote->getSubtotal(),                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => $this->getTotalATI($quote),                      // Amount included taxes and excluded shipping
+            'totalATI'      => $this->getTotalATI($items),                      // Amount included taxes and excluded shipping
             'ip'            => $quote->getRemoteIp(),                           // User IP
             'accountId'     => $accountId,                                      // Account id of the buyer
             'civility'      => $gender,                                         // Use string in this list : 'mister','madam','miss'
@@ -344,7 +352,7 @@ class Cartsguru_Model_Webservice
         $baseUrl = Mage::getBaseUrl() . 'api/rest';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.1.3',
+            'pluginVersion'         => '1.1.4',
             'storeVersion'          => Mage::getVersion()
         );
         $siteId = Mage::getStoreConfig('cartsguru/cartsguru_group/siteid', Mage::app()->getStore());
