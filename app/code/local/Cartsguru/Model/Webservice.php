@@ -18,7 +18,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
     protected function getStoreFromAdmin(){
-        $store_id;
+        $store_id = null;
         if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
         {
             $store_id = Mage::getModel('core/store')->load($code)->getId();
@@ -476,7 +476,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.12',
+            'pluginVersion'         => '1.2.13',
             'storeVersion'          => Mage::getVersion()
         );
 
