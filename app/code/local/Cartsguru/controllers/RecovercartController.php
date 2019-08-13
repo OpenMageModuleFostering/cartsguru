@@ -13,7 +13,7 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
         
         // Stop if no enoguth params
         if (!isset($params['cart_id']) || !isset($params['cart_token'])){
-            return redirectToCart();
+            return $this->redirectToCart();
         }
         
         // Load quote by id
@@ -21,13 +21,13 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
 
         // Stop if quote does not exist
         if (!$quote->getId()){
-            return redirectToCart();
+            return $this->redirectToCart();
         }
         
         // Check quote token
         $token = $quote->getData('cartsguru_token');
         if (!$token || $token != $params['cart_token']){
-            return redirectToCart();
+            return $this->redirectToCart();
         }
         
         // Auto log customer if we can
@@ -72,6 +72,6 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
         }
         
         // Redirect to checkout
-        return redirectToCart();
+        return $this->redirectToCart();
     }
 }
