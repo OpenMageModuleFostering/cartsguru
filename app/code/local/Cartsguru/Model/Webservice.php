@@ -58,8 +58,9 @@ class Cartsguru_Model_Webservice
             $gender = $customer->getGender();
         }
 
-        $phone = $order->getTelephone();
-        $country = $order->getCountry();
+        $address = $order->getBillingAddress();
+        $phone = $address->getTelephone();
+        $country = $address->getCountryId();
         if (!$accountId = $order->getCustomerId()) {
             $accountId = $order->getCustomerEmail();
         }
@@ -165,7 +166,7 @@ class Cartsguru_Model_Webservice
         $baseUrl = Mage::getBaseUrl() . 'api/rest';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.1.1',
+            'pluginVersion'         => '1.1.2',
             'storeVersion'          => Mage::getVersion()
         );
         $siteId = Mage::getStoreConfig('cartsguru/cartsguru_group/siteid', Mage::app()->getStore());
@@ -248,9 +249,10 @@ class Cartsguru_Model_Webservice
 
         $lastname = $quote->getCustomerLastname();
         $firstname = $quote->getCustomerFirstname();
-
-        $phone = $quote->getTelephone();
-        $country = $quote->getCountry();
+        
+        $address = $quote->getBillingAddress();
+        $phone = ($address)? $address->getTelephone() : $quote->getTelephone();
+        $country = ($address)? $address->getCountryId() : $quote->getCountryId();
 
         if (!$items) {
             return;
