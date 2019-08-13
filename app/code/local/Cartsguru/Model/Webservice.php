@@ -6,10 +6,8 @@
  */
 class Cartsguru_Model_Webservice
 {
-    private $apiBaseUrl = 'http://api.cartninja.io';
-    //private $apiBaseUrl = 'https://api.carts.guru';
+    private $apiBaseUrl = 'https://api.carts.guru';
     private $configBasePath = 'cartsguru/cartsguru_group/';
-
     private $historySize = 250;
 
     /* Main cache tag constant */
@@ -478,7 +476,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.10',
+            'pluginVersion'         => '1.2.11',
             'storeVersion'          => Mage::getVersion()
         );
 

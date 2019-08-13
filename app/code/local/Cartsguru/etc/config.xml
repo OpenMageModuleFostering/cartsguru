@@ -3,7 +3,7 @@
     <!-- plugin name -->
     <modules>
         <Cartsguru>
-            <version>1.2.10</version>
+            <version>1.2.11</version>
         </Cartsguru>
     </modules>
     <global>
