@@ -122,16 +122,14 @@ class Cartsguru_Model_Webservice
         $items = array();
         foreach ($obj->getAllVisibleItems() as $item) {
             $product = Mage::getModel('catalog/product')->load($item->getProductId());
-            if($product->getImage() && $product->getImage() != 'no_selection') {
-                $imageUrl=(string)Mage::helper('catalog/image')->init($product, 'small_image')
-                    ->constrainOnly(false)
-                    ->keepAspectRatio(true)
-                    ->keepFrame(true)
-                    ->resize(120, 120);
+            
+            if ($product->getImage() == 'no_selection' || !$product->getImage()){
+                $imageUrl = $this->notEmpty(null);
             }
             else {
-                $imageUrl=$this->notEmpty(null);
+                $imageUrl = $product->getSmallImageUrl(120, 120);
             }
+            
             $categoryNames = $this->getCatNames($product);
             
             $quantity = (int)$item->getQtyOrdered();
@@ -421,7 +419,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.3',
+            'pluginVersion'         => '1.2.4',
             'storeVersion'          => Mage::getVersion()
         );
 
