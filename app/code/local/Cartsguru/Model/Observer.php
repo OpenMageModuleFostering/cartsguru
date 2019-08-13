@@ -7,29 +7,39 @@
 class Cartsguru_Model_Observer
 {
     /**
-     * This method check api available after save config in admin
+     * Check api is available after save config in admin
      * @param $observer
      */
     public function configSaveAfter($observer)
     {
         $session = Mage::getSingleton('core/session');
-        return (Mage::getModel('cartsguru/webservice')->checkAddress()) ?
-                $session->addSuccess('Connection checked')
-                : $session->addError('Error check connection');
+        $webservice = Mage::getModel('cartsguru/webservice');
+        
+        $result = $webservice->checkAddress();
+        
+        if ($result == false){
+            return $session->addError('Error check connection');
+        }
+        
+        $session->addSuccess('Connection checked');
+        
+        if ($result->isNew){
+            $webservice->sendHistory();
+        }
     }
 
     /**
-     * This method - hook for order save api call
+     * Handle customer data change, and push it to carts guuru
      * @param $observer
      */
-    public function orderSaveAfter($observer)
+    public function customerSaveAfter($observer)
     {
-        $order = $observer->getOrder();
-        Mage::getModel('cartsguru/webservice')->sendOrder($order);
-    }
-
+        $customer = $observer->getCustomer();
+        Mage::getModel('cartsguru/webservice')->sendAccount($customer);
+    }   
+    
     /**
-     * This method add token to quote
+     * Set token before quote is save
      * @param $observer
      */
     public function quoteSaveBefore($observer)
@@ -42,22 +52,26 @@ class Cartsguru_Model_Observer
     }
 
     /**
-     * This method - hook for customer save api call
+     * Handle quote is saved, and push it to carts guru 
      * @param $observer
      */
-    public function customerSaveAfter($observer)
+    public function quoteSaveAfter($observer)
     {
-        $customer = $observer->getCustomer();
-        Mage::getModel('cartsguru/webservice')->sendAccount($customer);
+        $quote = $observer->getEvent()->getQuote();
+        Mage::getModel('cartsguru/webservice')->sendAbadonnedCart($quote);
     }
 
     /**
-     * This method - hook for quote save api call
+     * Handle order updated, and push it to carts guru
      * @param $observer
      */
-    public function productAddAfter($observer)
-    {
-        $quote = Mage::getModel('checkout/session')->getQuote();
-        Mage::getModel('cartsguru/webservice')->sendAbadonnedCart($quote);
-    }
+    public function orderSaveAfter($observer) {
+        /* @var Mage_Sales_Model_Order $order */
+        $order = $observer->getOrder();
+        
+        // Only trigger when order status change
+        if ($order->getStatus() != $order->getOrigData('status')) {
+            Mage::getModel('cartsguru/webservice')->sendOrder($order);
+        } 
+    }    
 }

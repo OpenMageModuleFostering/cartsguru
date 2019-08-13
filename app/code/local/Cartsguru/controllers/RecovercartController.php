@@ -2,13 +2,18 @@
 
 class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action {    
     
+    private function redirectToCart() {
+        $url = Mage::helper('checkout/cart')->getCartUrl();
+        $this->getResponse()->setRedirect($url)->sendResponse();
+    }
+    
     public function indexAction(){
         // Get request params
         $params = $this->getRequest()->getParams();
         
         // Stop if no enoguth params
         if (!isset($params['cart_id']) || !isset($params['cart_token'])){
-            return;
+            return redirectToCart();
         }
         
         // Load quote by id
@@ -16,13 +21,13 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
 
         // Stop if quote does not exist
         if (!$quote->getId()){
-            return;
+            return redirectToCart();
         }
         
         // Check quote token
         $token = $quote->getData('cartsguru_token');
         if (!$token || $token != $params['cart_token']){
-            return;
+            return redirectToCart();
         }
         
         // Auto log customer if we can
@@ -59,16 +64,14 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
                     }
                 }
             }
-
-            
             
             $quote->save();
             $cart->setQuote($quote);
             $cart->init();
             $cart->save();
         }
+        
         // Redirect to checkout
-        $url = Mage::helper('checkout/cart')->getCartUrl();
-        $this->getResponse()->setRedirect($url)->sendResponse();
+        return redirectToCart();
     }
 }

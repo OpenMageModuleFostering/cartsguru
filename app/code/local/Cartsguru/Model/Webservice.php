@@ -8,6 +8,7 @@ class Cartsguru_Model_Webservice
 {
     private $apiBaseUrl = 'https://api.carts.guru';
     private $configBasePath = 'cartsguru/cartsguru_group/';
+    private $historySize = 150;
 
     protected function getStoreFromAdmin(){
         $store_id;
@@ -20,12 +21,16 @@ class Cartsguru_Model_Webservice
             $website_id = Mage::getModel('core/website')->load($code)->getId();
             $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
         }
-
+        elseif (strlen($code = Mage::app()->getRequest()->getParam('website'))) {
+            $website_id = Mage::getModel('core/website')->load($code)->getId();
+            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId(); 
+        }
+        
         if ($store_id){
             return Mage::app()->getStore($store_id);
         }
         else {
-            return null;
+            return Mage::app()->getStore();
         }
     }
     
@@ -157,7 +162,7 @@ class Cartsguru_Model_Webservice
      * @param $order
      * @return array
      */
-    public function getOrderData($order)
+    public function getOrderData($order, $store = null)
     {
         //Order must have a status
         if (!$order->getStatus()){
@@ -175,14 +180,16 @@ class Cartsguru_Model_Webservice
         $items = $this->getItemsData($order);
 
         return array(
-            'siteId'        => $this->getStoreConfig('siteid'),                                 // SiteId is part of plugin configuration
+            'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
             'id'            => $order->getIncrementId(),                                        // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
             'totalET'       => (float)$order->getSubtotal(),                                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => (float)$order->getGrandTotal(),                                         // Paid amount
+            'totalATI'      => (float)$order->getGrandTotal(),                                  // Paid amount
+            'currency'      => $order->getOrderCurrencyCode(),                                  // Currency as USD, EUR
+            'paymentMethod' => $order->getPayment()->getMethodInstance()->getTitle(),           // Payment method label
             'state'         => $order->getStatus(),                                             // raw order status
-            'accountId'     => $email,                                                      // Account id of the buyer
+            'accountId'     => $email,                                                          // Account id of the buyer
             'ip'            => $order->getRemoteIp(),                                           // User IP
             'civility'      => $this->notEmpty($gender),                                        // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($address->getLastname()),                        // Lastname of the buyer
@@ -205,11 +212,21 @@ class Cartsguru_Model_Webservice
             return;
         }
         
+        //Get data, stop if none
         $orderData = $this->getOrderData($order);
-        if (!empty($orderData)) {
-            $this->doPostRequest('/orders', $orderData);
+        if (empty($orderData)) {
+            return;
         }
-    }
+        
+        //Push data to api
+        $this->doPostRequest('/orders', $orderData);
+    }   
+    
+    /**
+     * Map int of geder to string
+     * @param $gender
+     * @return string
+     */
     public function genderMapping($gender){
         switch((int)$gender){
             case 1: 
@@ -220,12 +237,13 @@ class Cartsguru_Model_Webservice
                 return '';
         }
     }
+    
     /**
      * This method return abounded cart data in cartsguru api format
      * @param $quote
      * @return array|void
      */
-    public function getAbadonnedCartData($quote)
+    public function getAbadonnedCartData($quote, $store = null)
     {
         //Customer data
         $gender = $this->genderMapping($quote->getCustomerGender());
@@ -285,13 +303,14 @@ class Cartsguru_Model_Webservice
         }
         
         return array(
-            'siteId'        => $this->getStoreConfig('siteid'),                 // SiteId is part of plugin configuration
+            'siteId'        => $this->getStoreConfig('siteid', $store),         // SiteId is part of plugin configuration
             'id'            => $quote->getId(),                                 // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($quote->getCreatedAt()),       // Date of the order as string in json format
             'totalET'       => (float)$quote->getSubtotal(),                    // Amount excluded taxes and excluded shipping
             'totalATI'      => $this->getTotalATI($items),                      // Amount included taxes and excluded shipping
+            'currency'      => $quote->getQuoteCurrencyCode(),                  // Currency as USD, EUR
             'ip'            => $quote->getRemoteIp(),                           // User IP
-            'accountId'     => $email,                                      // Account id of the buyer
+            'accountId'     => $email,                                          // Account id of the buyer
             'civility'      => $gender,                                         // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($lastname),                      // Lastname of the buyer
             'firstname'     => $this->notEmpty($firstname),                     // Firstname of the buyer
@@ -307,7 +326,7 @@ class Cartsguru_Model_Webservice
      * This method send abounded cart data
      * @param $quote
      */
-    public function sendAbadonnedCart($quote)
+    public function sendAbadonnedCart($quote, $isImport = false)
     {
         //Check is well configured
         if (!$this->isStoreConfigured()){
@@ -320,15 +339,24 @@ class Cartsguru_Model_Webservice
             return;
         }
         
-        //Check not already sent
-        $cache = Mage::app()->getCache();
-        $data = $cache->load(md5(json_encode($cartData)));
-        if (empty($data)) {
-            $cache->save(serialize($cartData), md5(json_encode($cartData)));
-            if ($cartData) {
-                $this->doPostRequest('/carts', $cartData);
+        if (!$isImport){
+            //Check not already sent
+            $cache = Mage::app()->getCache();
+            $cacheId = 'cg-quote-' . $quote->getId();
+            $cachedMd5 = $cache->load($cacheId);
+            $dataMd5 = md5(json_encode($cartData));
+
+            if ($dataMd5 == $cachedMd5) {
+                return;
             }
+
+            $cache->save($dataMd5, $cacheId);
         }
+
+        //Set special if import
+        $route = $isImport ? '/import/carts' : '/carts';
+            
+        $this->doPostRequest($route, $cartData);
     }
     
     /**
@@ -366,7 +394,7 @@ class Cartsguru_Model_Webservice
      * @param $customer
      * @return array
      */
-    public function getCustomerData($customer)
+    public function getCustomerData($customer, $store = null)
     {
         $address = $customer->getDefaultBillingAddress();
         
@@ -381,13 +409,13 @@ class Cartsguru_Model_Webservice
         }
 
         return array(
-            'siteId'        => $this->getStoreConfig('siteid'),         // SiteId is part of plugin configuration
-            'accountId'     => $customer->getId(),                      // Account id of the customer
-            'civility'      => $gender,                                 // Use string in this list : 'mister','madam','miss'
-            'lastname'      => $this->notEmpty($lastname),              // Lastname of the buyer
-            'firstname'     => $this->notEmpty($firstname),             // Firstname of the buyer
-            'email'         => $this->notEmpty($customer->getEmail()),  // Email of the customer
-            'phoneNumber'   => $this->notEmpty($phone),                 // Landline phone number of buyer (internationnal format)
+            'siteId'        => $this->getStoreConfig('siteid', $store),     // SiteId is part of plugin configuration
+            'accountId'     => $customer->getId(),                          // Account id of the customer
+            'civility'      => $gender,                                     // Use string in this list : 'mister','madam','miss'
+            'lastname'      => $this->notEmpty($lastname),                  // Lastname of the buyer
+            'firstname'     => $this->notEmpty($firstname),                 // Firstname of the buyer
+            'email'         => $this->notEmpty($customer->getEmail()),      // Email of the customer
+            'phoneNumber'   => $this->notEmpty($phone),                     // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($country)
         );
     }
@@ -419,18 +447,121 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.5',
+            'pluginVersion'         => '1.2.6',
             'storeVersion'          => Mage::getVersion()
         );
 
         $response = $this->doPostRequest($requestUrl, $fields, $store);
-        $isSuccess = ($response)?
-                ($response->getStatus() == 200)
-                : false;
         
-        //Set is well configurerd
-        return $isSuccess;
+        if (!$response || $response->getStatus() != 200){
+            return false;
+        }
+        
+        return json_decode($response->getBody());
     }    
+    
+
+     /* Send quote and order history
+     *
+     * @param int $quoteId
+     * @param string|int $store
+     * @return Mage_Sales_Model_Quote
+     */
+    public function sendHistory()
+    {
+        $store = $this->getStoreFromAdmin();
+        
+        $lastOrder = $this->sendLastOrders($store);
+        if ($lastOrder){
+            $this->sendLastQuotes($store, $lastOrder->getCreatedAt());
+        }
+    }
+    
+    private function sendLastOrders($store){
+        $orders = [];
+        $last = null;
+        $items = Mage::getModel('sales/order')
+                    ->getCollection()
+                    ->setOrder('created_at', 'desc')       
+                    ->setPageSize($this->historySize)
+                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
+                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
+                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-1 month'))));
+
+        //Check count of items
+        if (count($items) > $this->historySize){
+                $items = Mage::getModel('sales/order')
+                    ->getCollection()
+                    ->setOrder('created_at', 'desc')
+                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
+                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
+                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-1 month'))))
+                    ->setPageSize($this->historySize);
+        }        
+        else {
+                $items = Mage::getModel('sales/order')
+                    ->getCollection()
+                    ->setOrder('created_at', 'desc')
+                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
+                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
+                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-12 month'))))
+                    ->setPageSize($this->historySize);
+        }
+        
+        foreach($items as $item){
+            $order = Mage::getModel("sales/order")->load($item->getId()); 
+            $last = $order;
+            
+            //Get order data
+            $orderData = $this->getOrderData($order, $store);
+
+            //Append only if we get it
+            if (!empty($orderData)){
+                $orders[] = $orderData;
+            }
+        }
+
+        //Push orders to api
+        if (!empty($orders)){
+            $this->doPostRequest('/import/orders', $orders, $store);    
+        }
+        
+        return $last;
+    }
+    
+    private function sendLastQuotes($store, $since){
+        $quotes = [];
+        $last = null;
+        $items = Mage::getModel('sales/quote')
+                ->getCollection()
+                ->setOrder('created_at', 'asc')
+                ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
+                ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
+                ->addFieldToFilter('created_at', array('gt' =>  $since));
+
+        foreach($items as $item){
+            $quote = Mage::getModel("sales/quote")->loadByIdWithoutStore($item->getId());
+            $last = $quote;
+            
+            if ($quote){
+                //Get quote data
+                $quoteData = $this->getAbadonnedCartData($quote, $store);        
+
+                //Append only if we get it
+                if ($quoteData){
+                    $quotes[] = $quoteData;
+                }
+            }
+        }
+
+        //Push quotes to api
+        if (!empty($quotes)){
+            $this->doPostRequest('/import/carts', $quotes, $store);    
+        }
+        
+        return $last;
+    }
+    
     
     /**
      * This method send data on api path
@@ -438,7 +569,7 @@ class Cartsguru_Model_Webservice
      * @param $fields
      * @return Zend_Http_Response
      */
-    protected function doPostRequest($apiPath, $fields, $store=null)
+    private function doPostRequest($apiPath, $fields, $store=null)
     {
         try {
             $url = $this->apiBaseUrl . $apiPath;
