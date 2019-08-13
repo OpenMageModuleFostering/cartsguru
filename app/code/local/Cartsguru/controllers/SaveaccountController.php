@@ -13,8 +13,8 @@ class Cartsguru_SaveaccountController extends Mage_Core_Controller_Front_Action 
         // Post the data
         $quote = Mage::getModel('checkout/cart')->getQuote();
         $quote->setCustomerEmail($params['email']);
-        if (isset($params['firtsname'])){
-            $quote->setCustomerFirstname($params['firtsname']);
+        if (isset($params['firstname'])){
+            $quote->setCustomerFirstname($params['firstname']);
         }
         if (isset($params['lastname'])){
             $quote->setCustomerLastname($params['lastname']);

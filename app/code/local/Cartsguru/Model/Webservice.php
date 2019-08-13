@@ -151,7 +151,16 @@ class Cartsguru_Model_Webservice
             $image = Mage::helper('catalog/image')->init($product, 'small_image');
         }
 
-        return (string)$image;
+        //Get the url
+        $image = (string)$image;
+
+        //Work with the normal image if no small image available
+        if (empty($image)){
+            $image = Mage::helper('catalog/image')->init($product, 'image');
+            $image = (string)$image;
+        }
+
+        return $image;
     }
 
     /**
