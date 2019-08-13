@@ -17,7 +17,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.3.0';
+    const _CARTSGURU_VERSION_ = '1.3.1';
 
     protected function getStoreFromAdmin(){
         $store_id = null;
@@ -241,13 +241,15 @@ class Cartsguru_Model_Webservice
             'customerGroup' => $helper->getCustomerGroupName(),
             'isNewCustomer' => $helper->isNewCustomer($email)
         );
+        // We do this to include the discounts in the totalET
+        $totalET = number_format((float)($order->getTotalDue() - $order->getShippingAmount() - $order->getTaxAmount()), 2);
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
             'id'            => $order->getIncrementId(),                                        // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
-            'totalET'       => (float)$order->getSubtotal(),                                    // Amount excluded taxes and excluded shipping
+            'totalET'       => $totalET,                                                        // Amount excluded taxes and excluded shipping
             'totalATI'      => (float)$order->getGrandTotal(),                                  // Paid amount
             'currency'      => $order->getOrderCurrencyCode(),                                  // Currency as USD, EUR
             'paymentMethod' => $order->getPayment()->getMethodInstance()->getTitle(),           // Payment method label

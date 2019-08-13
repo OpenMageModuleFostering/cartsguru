@@ -53,10 +53,11 @@
     }
 
     function trackData () {
-        var data = collectData();
+        var data = collectData(),
+        trackingURL = typeof cartsguru_tracking_url !== 'undefined' ? cartsguru_tracking_url : '/cartsguru/saveaccount';
         if (data) {
             xhr = new XMLHttpRequest();
-            xhr.open('POST', '/cartsguru/saveaccount', true);
+            xhr.open('POST', trackingURL, true);
             xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
             xhr.send(data.join("&"));
         }

@@ -38,4 +38,11 @@ class Cartsguru_Block_Pixel extends Mage_Core_Block_Template
         }
         return false;
     }
+    /**
+     * Get the tracking URL
+     */
+    protected function getTrackingURL()
+    {
+        return $this->getUrl('cartsguru/saveaccount');
+    }
 }
