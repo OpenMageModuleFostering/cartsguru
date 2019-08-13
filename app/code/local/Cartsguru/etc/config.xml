@@ -3,7 +3,7 @@
     <!-- plugin name -->
     <modules>
         <Cartsguru>
-            <version>1.2.16</version>
+            <version>1.2.2</version>
         </Cartsguru>
     </modules>
     <global>
@@ -44,6 +44,25 @@
                     </cartsguru_admin_system_config_changed_section_cartsguru>
                 </observers>
             </admin_system_config_changed_section_cartsguru>
+            <sales_order_place_after>
+                <observers>
+                    <cartsguru_sales_order_save_after>
+                        <type>singleton</type>
+                        <class>cartsguru/observer</class>
+                        <method>orderSaveAfter</method>
+                    </cartsguru_sales_order_save_after>
+                </observers>
+            </sales_order_place_after>
+            <sales_order_save_after>
+                <observers>
+                    <cartsguru_sales_order_save_after>
+                        <type>singleton</type>
+                        <class>cartsguru/observer</class>
+                        <method>orderSaveAfter</method>
+                    </cartsguru_sales_order_save_after>
+                </observers>
+            </sales_order_save_after>
+            <!-- when customer register this hooks call two times-->
             <customer_save_after>
                 <observers>
                     <cartsguru_customer_save_after>
@@ -53,6 +72,33 @@
                     </cartsguru_customer_save_after>
                 </observers>
             </customer_save_after>
+            <customer_register_success>
+                <observers>
+                    <cartsguru_customer_register_success>
+                        <type>singleton</type>
+                        <class>cartsguru/observer</class>
+                        <method>customerSaveAfter</method>
+                    </cartsguru_customer_register_success>
+                </observers>
+            </customer_register_success>
+            <sales_quote_remove_item>
+                <observers>
+                    <cartsguru_sales_quote_remove_item>
+                        <type>singleton</type>
+                        <class>cartsguru/observer</class>
+                        <method>productAddAfter</method>
+                    </cartsguru_sales_quote_remove_item>
+                </observers>
+            </sales_quote_remove_item>
+            <checkout_cart_product_add_after>
+                <observers>
+                    <cartsguru_cart_product_add_after>
+                        <type>singleton</type>
+                        <class>cartsguru/observer</class>
+                        <method>productAddAfter</method>
+                    </cartsguru_cart_product_add_after>
+                </observers>
+            </checkout_cart_product_add_after>
             <sales_quote_save_before>
                 <observers>
                     <cartsguru_sales_quote_save_before>
@@ -67,19 +113,19 @@
                     <cartsguru_sales_quote_save_after>
                         <type>singleton</type>
                         <class>cartsguru/observer</class>
-                        <method>quoteSaveAfter</method>
+                        <method>productAddAfter</method>
                     </cartsguru_sales_quote_save_after>
                 </observers>
             </sales_quote_save_after>
-            <sales_order_save_after>
+            <customer_login>
                 <observers>
-                    <cartsguru_sales_order_save_after>
+                    <customer_login>
                         <type>singleton</type>
                         <class>cartsguru/observer</class>
-                        <method>orderSaveAfter</method>
-                    </cartsguru_sales_order_save_after>
+                        <method>productAddAfter</method>
+                    </customer_login>
                 </observers>
-            </sales_order_save_after>
+            </customer_login>
         </events>
     </global>
     <adminhtml>
@@ -125,13 +171,6 @@
                     <frontName>cartsguru</frontName>
                 </args>
             </cartsguru>
-        </routers>
-        <layout>
-            <updates>
-                <cartsguru>
-                    <file>cartsguru.xml</file>
-                </cartsguru>
-            </updates>
-        </layout>
+        </routers>  
     </frontend>
 </config>
