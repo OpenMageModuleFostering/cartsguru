@@ -51,8 +51,12 @@ class Cartsguru_Model_Webservice
         return $store->getConfig($this->configBasePath . $key);
     }
     
-    protected function isStoreConfigured(){
-        return $this->getStoreConfig('siteid') && $this->getStoreConfig('auth');
+    protected function isStoreConfigured($store = null){
+        if (!$store){
+            $store = Mage::app()->getStore();
+        }
+        
+        return $this->getStoreConfig('siteid',$store) && $this->getStoreConfig('auth',$store);
     }
     
     /**
@@ -207,19 +211,21 @@ class Cartsguru_Model_Webservice
      */
     public function sendOrder($order)
     {
+        $store = Mage::app()->getStore($order->getStoreId());
+        
         //Check is well configured
-        if (!$this->isStoreConfigured()){
+        if (!$this->isStoreConfigured($store)){
             return;
         }
         
         //Get data, stop if none
-        $orderData = $this->getOrderData($order);
+        $orderData = $this->getOrderData($order,$store);
         if (empty($orderData)) {
             return;
         }
         
         //Push data to api
-        $this->doPostRequest('/orders', $orderData);
+        $this->doPostRequest('/orders', $orderData, $store);
     }   
     
     /**
@@ -326,37 +332,35 @@ class Cartsguru_Model_Webservice
      * This method send abounded cart data
      * @param $quote
      */
-    public function sendAbadonnedCart($quote, $isImport = false)
+    public function sendAbadonnedCart($quote)
     {
+        $store = Mage::app()->getStore($quote->getStoreId());
+        
         //Check is well configured
-        if (!$this->isStoreConfigured()){
+        if (!$this->isStoreConfigured($store)){
             return;
         }
         
         //Get data and continue only if exist
-        $cartData = $this->getAbadonnedCartData($quote);
+        $cartData = $this->getAbadonnedCartData($quote, $store);
         if (!$cartData){
             return;
         }
         
-        if (!$isImport){
-            //Check not already sent
-            $cache = Mage::app()->getCache();
-            $cacheId = 'cg-quote-' . $quote->getId();
-            $cachedMd5 = $cache->load($cacheId);
-            $dataMd5 = md5(json_encode($cartData));
+        //Check not already sent
+        $cache = Mage::app()->getCache();
+        $cacheId = 'cg-quote-' . $quote->getId();
+        $cachedMd5 = $cache->load($cacheId);
+        $dataMd5 = md5(json_encode($cartData));
 
-            if ($dataMd5 == $cachedMd5) {
-                return;
-            }
-
-            $cache->save($dataMd5, $cacheId);
+        if ($dataMd5 == $cachedMd5) {
+            return;
         }
 
-        //Set special if import
-        $route = $isImport ? '/import/carts' : '/carts';
+        $cache->save($dataMd5, $cacheId);
+
             
-        $this->doPostRequest($route, $cartData);
+        $this->doPostRequest('/carts', $cartData, $store);
     }
     
     /**
@@ -447,7 +451,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.8',
+            'pluginVersion'         => '1.2.9',
             'storeVersion'          => Mage::getVersion()
         );
 
