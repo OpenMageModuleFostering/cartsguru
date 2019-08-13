@@ -16,7 +16,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.3.5';
+    const _CARTSGURU_VERSION_ = '1.3.6';
 
     public function isStoreConfigured($store = null)
     {
@@ -202,7 +202,7 @@ class Cartsguru_Model_Webservice
             'isNewCustomer' => $helper->isNewCustomer($email)
         );
         // We do this to include the discounts in the totalET
-        $totalET = number_format((float)($order->getGrandTotal() - $order->getShippingAmount() - $order->getTaxAmount()), 2);
+        $totalET = number_format((float)($order->getGrandTotal() - $order->getShippingAmount() - $order->getTaxAmount()), 2, '.', '');
 
         return array(
             'siteId'        => $helper->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
@@ -351,7 +351,7 @@ class Cartsguru_Model_Webservice
             'id'            => $quote->getId(),                                 // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($quote->getCreatedAt()),       // Date of the order as string in json format
             'totalET'       => (float)$quote->getSubtotal(),                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => $this->getTotalATI($items),                      // Amount included taxes and excluded shipping
+            'totalATI'      => (float)$this->getTotalATI($items),               // Amount included taxes and excluded shipping
             'currency'      => $quote->getQuoteCurrencyCode(),                  // Currency as USD, EUR
             'ip'            => $quote->getRemoteIp(),                           // User IP
             'accountId'     => $email,                                          // Account id of the buyer
