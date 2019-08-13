@@ -1,0 +1,23 @@
+<?php
+$facebookEnabled = $this->isFacebookEnabled();
+$pixel = $this->getPixel();
+$catalogId = $this->getCatalogId();
+
+if($facebookEnabled && $pixel && $catalogId && Mage::registry('product')):
+    $product = Mage::registry('product');
+    $price = $product->getData('price');
+    if (!$price) {
+        $price = $product->getData('special_price');
+    }
+    $price = number_format((double)$price, 2, '.', '');
+?>
+    <script type="text/javascript">
+        fbq('track', 'ViewContent', {
+            content_type: 'product',
+            content_ids: ['<?php echo $product->getId(); ?>'],
+            value: <?php echo $price; ?>,
+            currency: '<?php echo Mage::app()->getStore()->getCurrentCurrencyCode(); ?>',
+            product_catalog_id: '<?php echo $catalogId; ?>'
+        });
+    </script>
+<?php endif; ?>

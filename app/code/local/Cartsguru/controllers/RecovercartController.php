@@ -1,21 +1,21 @@
 <?php
 
-class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action {    
-    
+class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action {
+
     private function redirectToCart() {
         $url = Mage::helper('checkout/cart')->getCartUrl();
         $this->getResponse()->setRedirect($url)->sendResponse();
     }
-    
+
     public function indexAction(){
         // Get request params
         $params = $this->getRequest()->getParams();
-        
+
         // Stop if no enoguth params
         if (!isset($params['cart_id']) || !isset($params['cart_token'])){
             return $this->redirectToCart();
         }
-        
+
         // Load quote by id
         $quote = Mage::getModel('sales/quote')->load($params['cart_id']);
 
@@ -23,25 +23,25 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
         if (!$quote->getId()){
             return $this->redirectToCart();
         }
-        
+
         // Check quote token
         $token = $quote->getData('cartsguru_token');
         if (!$token || $token != $params['cart_token']){
             return $this->redirectToCart();
         }
-        
+
         // Auto log customer if we can
         if ($quote->getCustomerId()){
             //Gest customer
             $customer = Mage::getModel('customer/customer')->load($quote->getCustomerId());
-             
+
             Mage::getSingleton('customer/session')->setCustomerAsLoggedIn($customer);
         }
         else {
-            // Get current cart 
+            // Get current cart
             $cart = Mage::getSingleton('checkout/cart');
-            
-            
+
+
             foreach ($cart->getQuote()->getAllVisibleItems() as $item) {
                 $found = false;
                 foreach ($quote->getAllItems() as $quoteItem) {
@@ -51,7 +51,7 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
                         break;
                     }
                 }
-    
+
                 if (!$found) {
                     $newItem = clone $item;
                     $quote->addItem($newItem);
@@ -64,13 +64,13 @@ class Cartsguru_RecovercartController extends Mage_Core_Controller_Front_Action 
                     }
                 }
             }
-            
+
             $quote->save();
             $cart->setQuote($quote);
             $cart->init();
             $cart->save();
         }
-        
+
         // Redirect to checkout
         return $this->redirectToCart();
     }

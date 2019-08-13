@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<layout version="1.0.0">
+    <default>
+        <reference name="head">
+            <action method="addJs"><script>cartsguru/checkout.js</script></action>
+            <block type="cartsguru/pixel" name="cartsguru_pixel" template="cartsguru/pixel.phtml"/>
+        </reference>
+    </default>
+    <catalog_product_view>
+        <reference name="after_body_start">
+            <block type="cartsguru/pixel" name="cartsguru_pixel_productview" template="cartsguru/product/view.phtml" />
+        </reference>
+    </catalog_product_view>
+    <checkout_onepage_success translate="label">
+        <reference name="after_body_start">
+            <block type="cartsguru/pixel" name="cartsguru_pixel_purchase" template="cartsguru/checkout/purchase.phtml"/>
+        </reference>
+    </checkout_onepage_success>
+</layout>

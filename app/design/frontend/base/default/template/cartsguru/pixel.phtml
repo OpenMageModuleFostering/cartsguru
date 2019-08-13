@@ -1,0 +1,32 @@
+<?php
+$facebookEnabled = $this->isFacebookEnabled();
+$cartProduct = $this->getAddToCartProduct();
+$pixel = $this->getPixel();
+$catalogId = $this->getCatalogId();
+?>
+<?php if ($facebookEnabled && $pixel && $catalogId): ?>
+    <!-- Facebook Pixel Code -->
+    <script>
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+        document,'script','//connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '<?php echo $pixel; ?>');
+        fbq('track', "PageView");
+
+        <?php if ($cartProduct): ?>
+            fbq('track', 'AddToCart', {
+                content_type: 'product',
+                content_ids: ['<?php echo $cartProduct->id; ?>'],
+                value: <?php echo $cartProduct->price; ?>,
+                currency: '<?php echo Mage::app()->getStore()->getCurrentCurrencyCode(); ?>',
+                product_catalog_id: '<?php echo $catalogId; ?>'
+            });
+        <?php endif; ?>
+    </script>
+    <noscript>
+        <img height="1" width="1" style="display:none" src="//www.facebook.com/tr?id=<?php echo $fbpixel; ?>&ev=PageView&noscript=1" />
+    </noscript>
+    <!-- End Facebook Pixel Code -->
+<?php endif; ?>

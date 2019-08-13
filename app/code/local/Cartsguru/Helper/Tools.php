@@ -4,7 +4,7 @@
  * Class Cartsguru_Helper_Tools
  */
 class Cartsguru_Helper_Tools {
-    
+
 /**
  * This method generate a random uuid v4
  * @param $customer

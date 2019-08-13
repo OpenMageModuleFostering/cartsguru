@@ -1,0 +1,26 @@
+<?php
+$facebookEnabled = $this->isFacebookEnabled();
+$pixel = $this->getPixel();
+$catalogId = $this->getCatalogId();
+$lastOrder = Mage::getModel('sales/order')->load(Mage::getSingleton('checkout/session')->getLastOrderId());
+
+if ($facebookEnabled && $pixel && $catalogId && $lastOrder):
+    $items = $lastOrder->getAllVisibleItems();
+    $productIds = array();
+
+    foreach ($items as $item) {
+        array_push($productIds, $item->getId());
+    }
+    $total = number_format((double)$lastOrder->getGrandTotal(), 2, '.', '');
+?>
+    <script>
+        fbq('track', 'Purchase', {
+            content_ids: <?php echo Zend_Json::encode($productIds); ?>,
+            content_type: 'product',
+            value: <?php echo $total; ?>,
+            currency: '<?php echo Mage::app()->getStore()->getCurrentCurrencyCode(); ?>',
+            product_catalog_id: '<?php echo $catalogId; ?>'
+        });
+    </script>
+
+<?php endif; ?>

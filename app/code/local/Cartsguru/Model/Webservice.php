@@ -8,10 +8,19 @@ class Cartsguru_Model_Webservice
 {
     private $apiBaseUrl = 'https://api.carts.guru';
     private $configBasePath = 'cartsguru/cartsguru_group/';
-    private $historySize = 150;
+    private $historySize = 250;
+
+    /* Main cache tag constant */
+    const CACHE_TAG = 'cartsguru';
+    const PRODUCT_CACHE_TAG = 'cartsguru_products';
+    const PRODUCT_CACHE_TTL = 7200; // 2h in seconds
+    const QUOTES_CACHE_TAG = 'cartsguru_carts';
+    const QUOTES_CACHE_TTL = 1800; // 30min in seconds
+
+    const _CARTSGURU_VERSION_ = '1.3.0';
 
     protected function getStoreFromAdmin(){
-        $store_id;
+        $store_id = null;
         if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
         {
             $store_id = Mage::getModel('core/store')->load($code)->getId();
@@ -23,9 +32,9 @@ class Cartsguru_Model_Webservice
         }
         elseif (strlen($code = Mage::app()->getRequest()->getParam('website'))) {
             $website_id = Mage::getModel('core/website')->load($code)->getId();
-            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId(); 
+            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
         }
-        
+
         if ($store_id){
             return Mage::app()->getStore($store_id);
         }
@@ -33,32 +42,32 @@ class Cartsguru_Model_Webservice
             return Mage::app()->getStore();
         }
     }
-    
-    protected function setStoreConfig($key, $value, $store = null)
+
+    public function setStoreConfig($key, $value, $store = null)
     {
         if (!$store){
             $store = Mage::app()->getStore();
         }
-        
+
         $store->setConfig($this->configBasePath . $key, $value);
     }
-    
-    protected function getStoreConfig($key, $store = null){
+
+    public function getStoreConfig($key, $store = null){
         if (!$store){
             $store = Mage::app()->getStore();
         }
-        
+
         return $store->getConfig($this->configBasePath . $key);
     }
-    
-    protected function isStoreConfigured($store = null){
+
+    public function isStoreConfigured($store = null){
         if (!$store){
             $store = Mage::app()->getStore();
         }
-        
+
         return $this->getStoreConfig('siteid',$store) && $this->getStoreConfig('auth',$store);
     }
-    
+
     /**
      * If value is empty return ''
      * @param $value
@@ -78,7 +87,7 @@ class Cartsguru_Model_Webservice
     {
         return date('Y-m-d\TH:i:sP', strtotime($date));
     }
-    
+
     /**
      * Get category names
      * @param $item
@@ -106,7 +115,7 @@ class Cartsguru_Model_Webservice
 
         return $categoryNames;
     }
-    
+
     /**
      * This method calculate total taxes included, shipping excluded
      * @param $obj order or quote
@@ -114,53 +123,95 @@ class Cartsguru_Model_Webservice
      */
     public function getTotalATI($items){
         $totalATI = (float)0;
-        
+
         foreach ($items as $item) {
             $totalATI += $item['totalATI'];
         }
-        
+
         return $totalATI;
     }
-        
+
+    protected function getProudctImageUrl($product){
+        if ($product->getImage() == 'no_selection' || !$product->getImage()){
+            return $imageUrl = $this->notEmpty(null);
+        }
+
+        $image = null;
+
+        //Handle 1.9.0 feature
+        if (version_compare(Mage::getVersion(), '1.9.0', '>=')){
+            //Check if need resize or not
+            if (Mage::getStoreConfig(Mage_Catalog_Helper_Image::XML_NODE_PRODUCT_SMALL_IMAGE_WIDTH) < 120){
+                $image = Mage::helper('catalog/image')->init($product, 'image')->resize(120,120);
+            }
+            else {
+                $image = Mage::helper('catalog/image')->init($product, 'small_image');
+            }
+        } else {
+            $image = Mage::helper('catalog/image')->init($product, 'small_image');
+        }
+
+        //Get the url
+        $image = (string)$image;
+
+        //Work with the normal image if no small image available
+        if (empty($image)){
+            $image = Mage::helper('catalog/image')->init($product, 'image');
+            $image = (string)$image;
+        }
+
+        return $image;
+    }
+
     /**
      * This method build items from order or quote
      * @param $obj order or quote
      * @return array
      */
     public function getItemsData($obj){
+        $cache = Mage::app()->getCache();
         $items = array();
         foreach ($obj->getAllVisibleItems() as $item) {
-            $product = Mage::getModel('catalog/product')->load($item->getProductId());
-            
-            if ($product->getImage() == 'no_selection' || !$product->getImage()){
-                $imageUrl = $this->notEmpty(null);
+
+            //Check not already sent
+            $cacheId = 'cg-product-' . $item->getProductId();
+            $productData = $cache->load($cacheId);
+            if (!$productData) {
+                $product = Mage::getModel('catalog/product')->load($item->getProductId());
+
+                $categoryNames = $this->getCatNames($product);
+
+                $productData = array(
+                    'url'       => $product->getProductUrl(),           // URL of product sheet
+                    'imageUrl'  => $this->getProudctImageUrl($product), // URL of product image
+                    'universe'  => $this->notEmpty($categoryNames[1]),  // Main category
+                    'category'  => $this->notEmpty(end($categoryNames)) // Child category
+                );
+
+                $tags = array(Cartsguru_Model_Webservice::CACHE_TAG, Cartsguru_Model_Webservice::PRODUCT_CACHE_TAG);
+                $cache->save(json_encode($productData), $cacheId, $tags, Cartsguru_Model_Webservice::PRODUCT_CACHE_TTL);
             }
             else {
-                $imageUrl = $product->getSmallImageUrl(120, 120);
+                $productData = json_decode($productData, true);
             }
-            
-            $categoryNames = $this->getCatNames($product);
-            
-            $quantity = (int)$item->getQtyOrdered();
-            if ($quantity == 0){
-                $quantity = (int)$item->getQty();
-            }
-            
+
+            $quantity = (int)$item->getQtyOrdered() > 0 ?  (int)$item->getQtyOrdered() : (int)$item->getQty();
+
             $items[] = array(
                 'id'        => $item->getId(),                          // SKU or product id
                 'label'     => $item->getName(),                        // Designation
                 'quantity'  => $quantity,                               // Count
-                'totalET'   => (float)$item->getPrice()*$quantity, // Subtotal of item, taxe excluded
+                'totalET'   => (float)$item->getPrice()*$quantity,         // Subtotal of item, taxe excluded
                 'totalATI'  => (float)$item->getPriceInclTax()*$quantity, // Subtotal of item, taxe included
-                'url'       => $product->getProductUrl(),    // URL of product sheet
-                'imageUrl'  => $imageUrl,
-                'universe'  => $this->notEmpty($categoryNames[1]),
-                'category'  => $this->notEmpty(end($categoryNames))
+                'url'       => $productData['url'],
+                'imageUrl'  => $productData['imageUrl'],
+                'universe'  => $productData['universe'],
+                'category'  => $productData['category']
             );
         }
         return $items;
     }
-    
+
     /**
      * This method return order data in cartsguru format
      * @param $order
@@ -168,20 +219,28 @@ class Cartsguru_Model_Webservice
      */
     public function getOrderData($order, $store = null)
     {
+        $helper = Mage::helper('cartsguru');
         //Order must have a status
         if (!$order->getStatus()){
             return null;
         }
-        
+
         //Customer data
         $gender = $this->genderMapping($order->getCustomerGender());
         $email = $order->getCustomerEmail();
-        
+
         //Address
         $address = $order->getBillingAddress();
-        
+
         //Items details
         $items = $this->getItemsData($order);
+
+        // Custom fields
+        $custom = array(
+            'language' => $helper->getBrowserLanguage(),
+            'customerGroup' => $helper->getCustomerGroupName(),
+            'isNewCustomer' => $helper->isNewCustomer($email)
+        );
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
@@ -201,7 +260,8 @@ class Cartsguru_Model_Webservice
             'email'         => $this->notEmpty($email),                                         // Email of the buye
             'phoneNumber'   => $this->notEmpty($address->getTelephone()),                       // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($address->getCountryId()),                       // Country code of buyer
-            'items'         => $items                                                           // Details
+            'items'         => $items,                                                          // Details
+            'custom'        => $custom                                                          // Custom fields array
         );
     }
 
@@ -212,22 +272,29 @@ class Cartsguru_Model_Webservice
     public function sendOrder($order)
     {
         $store = Mage::app()->getStore($order->getStoreId());
-        
+
         //Check is well configured
         if (!$this->isStoreConfigured($store)){
             return;
         }
-        
+
         //Get data, stop if none
-        $orderData = $this->getOrderData($order,$store);
+        $orderData = $this->getOrderData($order, $store);
         if (empty($orderData)) {
             return;
         }
-        
+
+        // Check for source cookie
+        $source = Mage::getSingleton('core/cookie')->get('cartsguru-source');
+        if (!empty($source)) {
+            $orderData['source'] = unserialize($source);
+            Mage::getSingleton('core/cookie')->delete('cartsguru-source');
+        }
+
         //Push data to api
         $this->doPostRequest('/orders', $orderData, $store);
-    }   
-    
+    }
+
     /**
      * Map int of geder to string
      * @param $gender
@@ -235,7 +302,7 @@ class Cartsguru_Model_Webservice
      */
     public function genderMapping($gender){
         switch((int)$gender){
-            case 1: 
+            case 1:
                 return 'mister';
             case 2:
                 return 'madam';
@@ -243,7 +310,7 @@ class Cartsguru_Model_Webservice
                 return '';
         }
     }
-    
+
     /**
      * This method return abounded cart data in cartsguru api format
      * @param $quote
@@ -251,20 +318,21 @@ class Cartsguru_Model_Webservice
      */
     public function getAbadonnedCartData($quote, $store = null)
     {
+        $helper = Mage::helper('cartsguru');
         //Customer data
         $gender = $this->genderMapping($quote->getCustomerGender());
 
         $lastname = $quote->getCustomerLastname();
         $firstname = $quote->getCustomerFirstname();
         $email = $quote->getCustomerEmail();
-        
+
         //Lookup for phone & country
         $customer = $quote->getCustomer();
         $address = $quote->getBillingAddress();
         $request = Mage::app()->getRequest()->getParams();
         $phone = '';
         $country = '';
-        
+
         if (isset($request['billing'])) {
             if (isset($request['billing']['telephone'])) {
                 $phone = $request['billing']['telephone'];
@@ -274,8 +342,8 @@ class Cartsguru_Model_Webservice
                 $country = $request['billing']['country_id'];
             }
         }
-        
-        if ($address){
+
+        if ($address) {
             if (!$phone){
                 $phone = $address->getTelephone();
             }
@@ -283,23 +351,30 @@ class Cartsguru_Model_Webservice
                 $country = $address->getCountryId();
             }
         }
-        
-        if ($customer){
+
+        if ($customer) {
             $customerAddress = $customer->getDefaultBillingAddress();
-            
+
             if ($customerAddress && !$phone){
-                $phone = $customerAddress->getTelephone();    
+                $phone = $customerAddress->getTelephone();
             }
             if ($customerAddress && !$country){
                 $country = $customerAddress->getCountryId();
             }
         }
-        
+
+        // Custom fields
+        $custom = array(
+            'language' => $helper->getBrowserLanguage(),
+            'customerGroup' => $helper->getCustomerGroupName(),
+            'isNewCustomer' => $helper->isNewCustomer($email)
+        );
+
         //Recover link
         $recoverUrl = ($quote->getData('cartsguru_token')) ?
                         Mage::getBaseUrl() . 'cartsguru/recovercart?cart_id=' . $quote->getId() . '&cart_token=' . $quote->getData('cartsguru_token') :
                         '';
-        
+
         //Items details
         $items = $this->getItemsData($quote);
 
@@ -307,7 +382,7 @@ class Cartsguru_Model_Webservice
         if (!$email || sizeof($items) == 0) {
             return;
         }
-        
+
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),         // SiteId is part of plugin configuration
             'id'            => $quote->getId(),                                 // Order reference, the same display to the buyer
@@ -324,7 +399,8 @@ class Cartsguru_Model_Webservice
             'phoneNumber'   => $this->notEmpty($phone),                         // Landline phone number of buyer (internationnal format)
             'countryCode'   => $this->notEmpty($country),                       // Country code of the buyer
             'recoverUrl'    => $recoverUrl,                                     // Direct link to recover the cart
-            'items'         => $items                                           // Details
+            'items'         => $items,                                          // Details
+            'custom'        => $custom                                          // Custom fields array
         );
     }
 
@@ -335,18 +411,18 @@ class Cartsguru_Model_Webservice
     public function sendAbadonnedCart($quote)
     {
         $store = Mage::app()->getStore($quote->getStoreId());
-        
+
         //Check is well configured
         if (!$this->isStoreConfigured($store)){
             return;
         }
-        
+
         //Get data and continue only if exist
         $cartData = $this->getAbadonnedCartData($quote, $store);
         if (!$cartData){
             return;
         }
-        
+
         //Check not already sent
         $cache = Mage::app()->getCache();
         $cacheId = 'cg-quote-' . $quote->getId();
@@ -357,12 +433,13 @@ class Cartsguru_Model_Webservice
             return;
         }
 
-        $cache->save($dataMd5, $cacheId);
+        $tags = array(Cartsguru_Model_Webservice::CACHE_TAG, Cartsguru_Model_Webservice::QUOTES_CACHE_TAG);
+        $cache->save($dataMd5, $cacheId, $tags, Cartsguru_Model_Webservice::QUOTES_CACHE_TTL);
 
-            
+
         $this->doPostRequest('/carts', $cartData, $store);
     }
-    
+
     /**
      * Get customer Firstname
      * @param $customer
@@ -401,7 +478,7 @@ class Cartsguru_Model_Webservice
     public function getCustomerData($customer, $store = null)
     {
         $address = $customer->getDefaultBillingAddress();
-        
+
         $gender = $this->genderMapping($customer->getGender());
         $lastname = $this->getLastname($customer, $address);
         $firstname = $this->getFirstname($customer, $address);
@@ -414,7 +491,7 @@ class Cartsguru_Model_Webservice
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),     // SiteId is part of plugin configuration
-            'accountId'     => $customer->getId(),                          // Account id of the customer
+            'accountId'     => $customer->getEmail(),                          // Account id of the customer
             'civility'      => $gender,                                     // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($lastname),                  // Lastname of the buyer
             'firstname'     => $this->notEmpty($firstname),                 // Firstname of the buyer
@@ -434,11 +511,11 @@ class Cartsguru_Model_Webservice
         if (!$this->isStoreConfigured()){
             return;
         }
-        
+
         $customerData = $this->getCustomerData($customer);
         $this->doPostRequest('/accounts', $customerData);
     }
-    
+
 
 
     /** This method return true if connect to server is ok
@@ -447,23 +524,23 @@ class Cartsguru_Model_Webservice
     public function checkAddress()
     {
         $store = $this->getStoreFromAdmin();
-        
+
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.9',
-            'storeVersion'          => Mage::getVersion()
+            'pluginVersion'         => Cartsguru_Model_Webservice::_CARTSGURU_VERSION_,
+            'adminUrl'              => Mage::getBaseUrl() . 'cartsguru/admin?cartsguru_admin_action='
         );
 
-        $response = $this->doPostRequest($requestUrl, $fields, $store);
-        
+        $response = $this->doPostRequest($requestUrl, $fields, $store, true);
+
         if (!$response || $response->getStatus() != 200){
             return false;
         }
-        
+
         return json_decode($response->getBody());
-    }    
-    
+    }
+
 
      /* Send quote and order history
      *
@@ -473,49 +550,27 @@ class Cartsguru_Model_Webservice
      */
     public function sendHistory()
     {
-        $store = $this->getStoreFromAdmin();
-        
+        $store = Mage::app()->getWebsite(true)->getDefaultGroup()->getDefaultStore();
+
         $lastOrder = $this->sendLastOrders($store);
         if ($lastOrder){
             $this->sendLastQuotes($store, $lastOrder->getCreatedAt());
         }
     }
-    
+
     private function sendLastOrders($store){
         $orders = array();
         $last = null;
         $items = Mage::getModel('sales/order')
-                    ->getCollection()
-                    ->setOrder('created_at', 'desc')       
-                    ->setPageSize($this->historySize)
-                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
-                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
-                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-1 month'))));
+                   ->getCollection()
+                   ->setOrder('created_at', 'desc')
+                   ->setPageSize($this->historySize)
+                   ->addFieldToFilter('store_id', $store->getStoreId());
 
-        //Check count of items
-        if (count($items) > $this->historySize){
-                $items = Mage::getModel('sales/order')
-                    ->getCollection()
-                    ->setOrder('created_at', 'desc')
-                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
-                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
-                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-1 month'))))
-                    ->setPageSize($this->historySize);
-        }        
-        else {
-                $items = Mage::getModel('sales/order')
-                    ->getCollection()
-                    ->setOrder('created_at', 'desc')
-                    ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
-                    ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
-                    ->addFieldToFilter('created_at', array('gt' => date("Y-m-d H:i:s", strtotime('-12 month'))))
-                    ->setPageSize($this->historySize);
-        }
-        
         foreach($items as $item){
-            $order = Mage::getModel("sales/order")->load($item->getId()); 
+            $order = Mage::getModel("sales/order")->load($item->getId());
             $last = $order;
-            
+
             //Get order data
             $orderData = $this->getOrderData($order, $store);
 
@@ -527,29 +582,28 @@ class Cartsguru_Model_Webservice
 
         //Push orders to api
         if (!empty($orders)){
-            $this->doPostRequest('/import/orders', $orders, $store);    
+            $this->doPostRequest('/import/orders', $orders, $store);
         }
-        
+
         return $last;
     }
-    
+
     private function sendLastQuotes($store, $since){
         $quotes = array();
         $last = null;
         $items = Mage::getModel('sales/quote')
                 ->getCollection()
                 ->setOrder('created_at', 'asc')
-                ->join(array('stores' => 'core/store'), 'main_table.store_id=stores.store_id')
-                ->addFieldToFilter('stores.website_id', $store->getWebsiteId())
+                ->addFieldToFilter('store_id', $store->getStoreId())
                 ->addFieldToFilter('created_at', array('gt' =>  $since));
 
         foreach($items as $item){
             $quote = Mage::getModel("sales/quote")->loadByIdWithoutStore($item->getId());
             $last = $quote;
-            
+
             if ($quote){
                 //Get quote data
-                $quoteData = $this->getAbadonnedCartData($quote, $store);        
+                $quoteData = $this->getAbadonnedCartData($quote, $store);
 
                 //Append only if we get it
                 if ($quoteData){
@@ -560,25 +614,32 @@ class Cartsguru_Model_Webservice
 
         //Push quotes to api
         if (!empty($quotes)){
-            $this->doPostRequest('/import/carts', $quotes, $store);    
+            $this->doPostRequest('/import/carts', $quotes, $store);
         }
-        
+
         return $last;
     }
-    
-    
+
+
     /**
      * This method send data on api path
      * @param $apiPath
      * @param $fields
      * @return Zend_Http_Response
      */
-    private function doPostRequest($apiPath, $fields, $store=null)
+    private function doPostRequest($apiPath, $fields, $store=null, $isSync=false)
     {
+        $response = null;
+
         try {
             $url = $this->apiBaseUrl . $apiPath;
-            $client = new Zend_Http_Client($url);
+            $options = array(
+                'storeresponse' => false,           //We don't need store the response for later
+                'timeout'      => $isSync ? 10 : 1  //We need only wait if is sync, seconds as integer
+            );
+            $client = new Zend_Http_Client($url, $options);
             $client->setHeaders('x-auth-key', $this->getStoreConfig('auth', $store));
+            $client->setHeaders('x-plugin-version', Cartsguru_Model_Webservice::_CARTSGURU_VERSION_);
             $client->setUri($url);
             $client->setRawData(json_encode($fields), 'application/json');
             $response = $client->request(Zend_Http_Client::POST);
