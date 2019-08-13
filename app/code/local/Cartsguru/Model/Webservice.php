@@ -476,7 +476,7 @@ class Cartsguru_Model_Webservice
         $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.2.11',
+            'pluginVersion'         => '1.2.12',
             'storeVersion'          => Mage::getVersion()
         );
 
