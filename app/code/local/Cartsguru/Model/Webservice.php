@@ -17,7 +17,7 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.3.1';
+    const _CARTSGURU_VERSION_ = '1.3.2';
 
     protected function getStoreFromAdmin(){
         $store_id = null;
@@ -242,7 +242,7 @@ class Cartsguru_Model_Webservice
             'isNewCustomer' => $helper->isNewCustomer($email)
         );
         // We do this to include the discounts in the totalET
-        $totalET = number_format((float)($order->getTotalDue() - $order->getShippingAmount() - $order->getTaxAmount()), 2);
+        $totalET = number_format((float)($order->getGrandTotal() - $order->getShippingAmount() - $order->getTaxAmount()), 2);
 
         return array(
             'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
