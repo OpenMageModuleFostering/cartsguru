@@ -7,7 +7,7 @@ class Cartsguru_Block_Pixel extends Mage_Core_Block_Template
      */
     protected function isFacebookEnabled()
     {
-        return Mage::getStoreConfig("cartsguru/cartsguru_group/feature_facebook");
+        return Mage::helper('cartsguru')->getStoreConfig("feature_facebook");
     }
 
     /**
@@ -15,7 +15,7 @@ class Cartsguru_Block_Pixel extends Mage_Core_Block_Template
      */
     protected function getPixel()
     {
-        return Mage::getStoreConfig("cartsguru/cartsguru_group/facebook_pixel");
+        return Mage::helper('cartsguru')->getStoreConfig("facebook_pixel");
     }
 
     /**
@@ -23,7 +23,7 @@ class Cartsguru_Block_Pixel extends Mage_Core_Block_Template
      */
     protected function getCatalogId()
     {
-        return Mage::getStoreConfig("cartsguru/cartsguru_group/facebook_catalogId");
+        return Mage::helper('cartsguru')->getStoreConfig("facebook_catalogId");
     }
 
     /**

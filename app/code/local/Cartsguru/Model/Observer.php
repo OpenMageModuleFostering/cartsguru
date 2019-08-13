@@ -105,7 +105,8 @@ class Cartsguru_Model_Observer
      * @param $observer
      */
     public function checkoutCartAdd($observer) {
-        $facebook_enabled = Mage::getStoreConfig("cartsguru/cartsguru_group/feature_facebook");
+        $helper = Mage::helper('cartsguru');
+        $facebook_enabled = $helper->getStoreConfig("feature_facebook");
         if ($facebook_enabled) {
             // Laod product
             $product = Mage::getModel('catalog/product')

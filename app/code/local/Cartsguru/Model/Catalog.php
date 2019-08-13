@@ -7,54 +7,49 @@
 class Cartsguru_Model_Catalog {
 
     /**
-    * @var XMLWriter
-    */
-    protected $doc;
-
-    /**
     * The fields to be put into the feed.
     * @var array
     */
     protected $_requiredFields = array(
         array(
             'magento'   => 'id',
-            'feed'      => 'g:id',
+            'feed'      => 'id',
             'type'      => 'id',
         ),
         array(
             'magento'   => 'availability_google',
-            'feed'      => 'g:availability',
+            'feed'      => 'availability',
             'type'      => 'computed',
         ),
         // condition here
         array(
             'magento'   => 'description',
-            'feed'      => 'g:description',
+            'feed'      => 'description',
             'type'      => 'product_attribute',
         ),
         array(
             'magento'   => 'image_url',
-            'feed'      => 'g:image_link',
+            'feed'      => 'image_link',
             'type'      => 'computed',
         ),
         array(
             'magento'   => 'product_link',
-            'feed'      => 'g:link',
+            'feed'      => 'link',
             'type'      => 'computed',
         ),
         array(
             'magento'   => 'name',
-            'feed'      => 'g:title',
+            'feed'      => 'title',
             'type'      => 'product_attribute',
         ),
         array(
             'magento'   => 'manufacturer',
-            'feed'      => 'g:brand',
+            'feed'      => 'brand',
             'type'      => 'product_attribute',
         ),
         array(
             'magento'   => 'price',
-            'feed'      => 'g:price',
+            'feed'      => 'price',
             'type'      => 'computed',
         )
     );
@@ -62,24 +57,30 @@ class Cartsguru_Model_Catalog {
     /*
     * Generate XML product feed
     */
-    public function generateFeed()
+    public function generateFeed($store, $offset, $limit)
     {
         // setup attribute mapping
         $this->_attributes = array();
+
         foreach ($this->_requiredFields as $requiredField) {
             $this->_attributes[$requiredField['feed']] = $requiredField;
         }
 
-        $this->setupHeader(Mage::app()->getStore());
+        $result = array(
+            'url' => $store->getBaseUrl(),
+            'store_name' => $store->getFrontendName(),
+            'total' => Mage::getModel('catalog/product')->getCollection()->addStoreFilter()->addFieldToFilter('status', '1')->getSize()
+        );
+
         $productCollection = Mage::getResourceModel('catalog/product_collection');
         $productCollection->addStoreFilter();
+        $productCollection->addFieldToFilter('status', '1');
 
         $this->_products = array();
-        Mage::getSingleton('core/resource_iterator')->walk($productCollection->getSelect(), array(array($this, 'processProduct')));
+        Mage::getSingleton('core/resource_iterator')->walk($productCollection->getSelect()->limit($limit, $offset), array(array($this, 'processProduct')));
+        $result['products'] = $this->_products;
 
-        $this->setupFooter();
-
-        return $this->doc->flush();
+        return $result;
     }
 
     /*
@@ -134,42 +135,39 @@ class Cartsguru_Model_Catalog {
             $product_data[$attribute['feed']] = $value;
         }
 
-        $price = floatval($product_data['g:price']);
+        $price = floatval($product_data['price']);
         // Price is required
         if (empty($price)) {
             return;
         }
 
         // If manufacturer not set use mpn === sku
-        if ($product_data['g:brand'] === '') {
-            unset($product_data['g:brand']);
-            $product_data['g:mpn'] = $product_data['g:id'];
+        if ($product_data['brand'] === '') {
+            unset($product_data['brand']);
+            $product_data['mpn'] = $product_data['id'];
         }
 
         // All products are new
-        $product_data['g:condition'] = 'new';
-
-        // Sart new feed entry
-        $this->doc->startElement('entry');
+        $product_data['condition'] = 'new';
 
         foreach ($product_data as $feedTag => $value) {
             $safeString = null;
             switch ($feedTag) {
-                case 'g:link':
+                case 'link':
                 $safeString = $value;
                 break;
 
-                case 'g:price':
+                case 'price':
                 $safeString = sprintf('%.2f', $store->convertPrice($value, false, false)).' '.Mage::getStoreConfig('currency/options/default', $store->getStoreId());
                 break;
 
-                case 'g:sale_price':
+                case 'sale_price':
                 if($value && $value != ''){
                     $safeString = sprintf('%.2f', $store->convertPrice($value, false, false)).' '.Mage::getStoreConfig('currency/options/default', $store->getStoreId());
                 }
                 break;
 
-                case 'g:image_link':
+                case 'image_link':
                 if ($value == 'no_selection') {
                     $safeString = '';
                 } else {
@@ -186,38 +184,9 @@ class Cartsguru_Model_Catalog {
                 break;
             }
             if ($safeString !== null) {
-                $this->doc->writeElement($feedTag, $safeString);
+                $product_data[$feedTag] = $safeString;
             }
         }
-        $this->doc->endElement();
-    }
-
-    /*
-    * Instantiate the XML object
-    */
-    protected function setupHeader($store)
-    {
-        $this->doc = new XMLWriter();
-        $this->doc->openMemory();
-        $this->doc->setIndent(true);
-        $this->doc->setIndentString('    ');
-        $this->doc->startDocument('1.0', 'UTF-8');
-        $this->doc->startElement('feed');
-        $this->doc->writeAttribute('xmlns', 'http://www.w3.org/2005/Atom');
-        $this->doc->writeAttribute('xmlns:g', 'http://base.google.com/ns/1.0');
-        $this->doc->writeElement('title', $store->getName());
-        $this->doc->startElement('link');
-        $this->doc->writeAttribute('rel', 'self');
-        $this->doc->writeAttribute('href', $store->getBaseUrl());
-        $this->doc->endElement();
-    }
-
-    /*
-    * Close the XML object
-    */
-    protected function setupFooter()
-    {
-        $this->doc->endElement();
-        $this->doc->endDocument();
+        $this->_products[] = $product_data;
     }
 }

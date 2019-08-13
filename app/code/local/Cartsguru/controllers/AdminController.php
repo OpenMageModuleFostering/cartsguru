@@ -2,11 +2,10 @@
 
 class Cartsguru_AdminController extends Mage_Core_Controller_Front_Action {
 
-    public function indexAction(){
+    public function indexAction() {
+        $helper = Mage::helper('cartsguru');
         $params = $this->getRequest()->getParams();
-        $webservice = Mage::getModel('cartsguru/webservice');
-        $store = Mage::app()->getWebsite(true)->getDefaultGroup()->getDefaultStore();
-        $auth_key = $webservice->getStoreConfig('auth', $store);
+        $auth_key = $helper->getStoreConfig('auth');
         // Stop if no enoguth params
         if (!isset($params['cartsguru_admin_action']) || !isset($params['cartsguru_auth_key']) || $auth_key !== $params['cartsguru_auth_key']){
             die;
@@ -18,17 +17,30 @@ class Cartsguru_AdminController extends Mage_Core_Controller_Front_Action {
                 // Enable facebook
                 if ($data['facebook'] && $data['catalogId'] && $data['pixel']) {
                     // Save facebook pixel
-                    Mage::getConfig()->saveConfig('cartsguru/cartsguru_group/feature_facebook', true);
-                    Mage::getConfig()->saveConfig('cartsguru/cartsguru_group/facebook_pixel', $data['pixel']);
-                    Mage::getConfig()->saveConfig('cartsguru/cartsguru_group/facebook_catalogId', $data['catalogId']);
+                    $helper->setStoreConfig('feature_facebook', true);
+                    $helper->setStoreConfig('facebook_pixel', $data['pixel']);
+                    $helper->setStoreConfig('facebook_catalogId', $data['catalogId']);
                     // return catalogUrl
                     header('Content-Type: application/json; charset=utf-8');
-                    echo json_encode(array('catalogUrl' => Mage::getBaseUrl() . 'cartsguru/catalog'));
-                    die;
+                    echo json_encode(array(
+                        'catalogUrl' => Mage::app()->getStore($store)->getBaseUrl(Mage_Core_Model_Store::URL_TYPE_LINK) . 'cartsguru/catalog'
+                    ));
                 } elseif ($data['facebook'] == false) {
-                    Mage::getConfig()->saveConfig('cartsguru/cartsguru_group/feature_facebook', false);
+                    $helper->setStoreConfig('feature_facebook', false);
                 }
             }
         }
+        // Get config
+        if ($params['cartsguru_admin_action'] === 'displayConfig') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array(
+                'CARTSG_SITE_ID' => $helper->getStoreConfig('siteid'),
+                'CARTSG_FEATURE_FB' => $helper->getStoreConfig('feature_facebook'),
+                'CARTSG_FB_PIXEL' => $helper->getStoreConfig('facebook_pixel'),
+                'CARTSG_FB_CATALOGID' => $helper->getStoreConfig('facebook_catalogId'),
+                'PLUGIN_VERSION'=> (string) Mage::getConfig()->getNode()->modules->Cartsguru->version
+            ));
+        }
+        die;
     }
 }

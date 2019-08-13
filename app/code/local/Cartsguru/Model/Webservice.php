@@ -7,7 +7,6 @@
 class Cartsguru_Model_Webservice
 {
     private $apiBaseUrl = 'https://api.carts.guru';
-    private $configBasePath = 'cartsguru/cartsguru_group/';
     private $historySize = 250;
 
     /* Main cache tag constant */
@@ -17,55 +16,14 @@ class Cartsguru_Model_Webservice
     const QUOTES_CACHE_TAG = 'cartsguru_carts';
     const QUOTES_CACHE_TTL = 1800; // 30min in seconds
 
-    const _CARTSGURU_VERSION_ = '1.3.2';
-
-    protected function getStoreFromAdmin(){
-        $store_id = null;
-        if (strlen($code = Mage::getSingleton('adminhtml/config_data')->getStore())) // store level
-        {
-            $store_id = Mage::getModel('core/store')->load($code)->getId();
-        }
-        elseif (strlen($code = Mage::getSingleton('adminhtml/config_data')->getWebsite())) // website level
-        {
-            $website_id = Mage::getModel('core/website')->load($code)->getId();
-            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
-        }
-        elseif (strlen($code = Mage::app()->getRequest()->getParam('website'))) {
-            $website_id = Mage::getModel('core/website')->load($code)->getId();
-            $store_id = Mage::app()->getWebsite($website_id)->getDefaultStore()->getId();
-        }
-
-        if ($store_id){
-            return Mage::app()->getStore($store_id);
-        }
-        else {
-            return Mage::app()->getStore();
-        }
-    }
-
-    public function setStoreConfig($key, $value, $store = null)
-    {
-        if (!$store){
-            $store = Mage::app()->getStore();
-        }
-
-        $store->setConfig($this->configBasePath . $key, $value);
-    }
-
-    public function getStoreConfig($key, $store = null){
-        if (!$store){
-            $store = Mage::app()->getStore();
-        }
-
-        return $store->getConfig($this->configBasePath . $key);
-    }
+    const _CARTSGURU_VERSION_ = '1.3.3';
 
     public function isStoreConfigured($store = null){
         if (!$store){
             $store = Mage::app()->getStore();
         }
-
-        return $this->getStoreConfig('siteid',$store) && $this->getStoreConfig('auth',$store);
+        $helper = Mage::helper('cartsguru');
+        return $helper->getStoreConfig('siteid', $store) && $helper->getStoreConfig('auth', $store);
     }
 
     /**
@@ -238,14 +196,14 @@ class Cartsguru_Model_Webservice
         // Custom fields
         $custom = array(
             'language' => $helper->getBrowserLanguage(),
-            'customerGroup' => $helper->getCustomerGroupName(),
+            'customerGroup' => $helper->getCustomerGroupName($email),
             'isNewCustomer' => $helper->isNewCustomer($email)
         );
         // We do this to include the discounts in the totalET
         $totalET = number_format((float)($order->getGrandTotal() - $order->getShippingAmount() - $order->getTaxAmount()), 2);
 
         return array(
-            'siteId'        => $this->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
+            'siteId'        => $helper->getStoreConfig('siteid', $store),                         // SiteId is part of plugin configuration
             'id'            => $order->getIncrementId(),                                        // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
@@ -368,7 +326,7 @@ class Cartsguru_Model_Webservice
         // Custom fields
         $custom = array(
             'language' => $helper->getBrowserLanguage(),
-            'customerGroup' => $helper->getCustomerGroupName(),
+            'customerGroup' => $helper->getCustomerGroupName($email),
             'isNewCustomer' => $helper->isNewCustomer($email)
         );
 
@@ -386,7 +344,7 @@ class Cartsguru_Model_Webservice
         }
 
         return array(
-            'siteId'        => $this->getStoreConfig('siteid', $store),         // SiteId is part of plugin configuration
+            'siteId'        => $helper->getStoreConfig('siteid', $store),         // SiteId is part of plugin configuration
             'id'            => $quote->getId(),                                 // Order reference, the same display to the buyer
             'creationDate'  => $this->formatDate($quote->getCreatedAt()),       // Date of the order as string in json format
             'totalET'       => (float)$quote->getSubtotal(),                    // Amount excluded taxes and excluded shipping
@@ -479,6 +437,7 @@ class Cartsguru_Model_Webservice
      */
     public function getCustomerData($customer, $store = null)
     {
+        $helper = Mage::helper('cartsguru');
         $address = $customer->getDefaultBillingAddress();
 
         $gender = $this->genderMapping($customer->getGender());
@@ -492,7 +451,7 @@ class Cartsguru_Model_Webservice
         }
 
         return array(
-            'siteId'        => $this->getStoreConfig('siteid', $store),     // SiteId is part of plugin configuration
+            'siteId'        => $helper->getStoreConfig('siteid', $store),     // SiteId is part of plugin configuration
             'accountId'     => $customer->getEmail(),                          // Account id of the customer
             'civility'      => $gender,                                     // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($lastname),                  // Lastname of the buyer
@@ -525,13 +484,13 @@ class Cartsguru_Model_Webservice
      */
     public function checkAddress()
     {
-        $store = $this->getStoreFromAdmin();
-
-        $requestUrl = '/sites/' . $this->getStoreConfig('siteid', $store) . '/register-plugin';
+        $helper = Mage::helper('cartsguru');
+        $store = $helper->getStoreFromAdmin();
+        $requestUrl = '/sites/' . $helper->getStoreConfig('siteid', $store) . '/register-plugin';
         $fields = array(
             'plugin'                => 'magento',
             'pluginVersion'         => Cartsguru_Model_Webservice::_CARTSGURU_VERSION_,
-            'adminUrl'              => Mage::getBaseUrl() . 'cartsguru/admin?cartsguru_admin_action='
+            'adminUrl'              => Mage::app()->getStore($store)->getBaseUrl(Mage_Core_Model_Store::URL_TYPE_LINK) . 'cartsguru/admin?cartsguru_admin_action='
         );
 
         $response = $this->doPostRequest($requestUrl, $fields, $store, true);
@@ -632,6 +591,7 @@ class Cartsguru_Model_Webservice
     private function doPostRequest($apiPath, $fields, $store=null, $isSync=false)
     {
         $response = null;
+        $helper = Mage::helper('cartsguru');
 
         try {
             $url = $this->apiBaseUrl . $apiPath;
@@ -640,7 +600,7 @@ class Cartsguru_Model_Webservice
                 'timeout'      => $isSync ? 10 : 1  //We need only wait if is sync, seconds as integer
             );
             $client = new Zend_Http_Client($url, $options);
-            $client->setHeaders('x-auth-key', $this->getStoreConfig('auth', $store));
+            $client->setHeaders('x-auth-key', $helper->getStoreConfig('auth', $store));
             $client->setHeaders('x-plugin-version', Cartsguru_Model_Webservice::_CARTSGURU_VERSION_);
             $client->setUri($url);
             $client->setRawData(json_encode($fields), 'application/json');
