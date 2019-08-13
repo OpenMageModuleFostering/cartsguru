@@ -29,11 +29,16 @@ class Cartsguru_Model_Observer
     }
 
     /**
-     * This method add telephone and country code to quote
+     * This method add token to quote
      * @param $observer
      */
     public function quoteSaveBefore($observer)
     {
+        $quote = $observer->getEvent()->getQuote();
+        if (!$quote->getData('cartsguru_token')){
+            $tools = Mage::helper('cartsguru/tools');
+            $quote->setData('cartsguru_token',$tools::generateUUID());
+        }
     }
 
     /**

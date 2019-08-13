@@ -3,45 +3,10 @@
     <!-- plugin name -->
     <modules>
         <Cartsguru>
-            <version>1.1.5</version>
+            <version>1.2.0</version>
         </Cartsguru>
     </modules>
     <global>
-        <!--add some attributes for easy send it throw api -->
-        <sales>
-            <quote>
-                <customer_attributes>
-                    <telephone />
-                    <country />
-                </customer_attributes>
-            </quote>
-        </sales>
-        <fieldsets>
-            <sales_convert_quote>
-                <country>
-                    <to_order>*</to_order>
-                </country>
-                <telephone>
-                    <to_order>*</to_order>
-                </telephone>
-            </sales_convert_quote>
-            <sales_convert_quote>
-                <country>
-                    <to_order>*</to_order>
-                </country>
-                <telephone>
-                    <to_order>*</to_order>
-                </telephone>
-            </sales_convert_quote>
-            <sales_convert_order>
-                <country>
-                    <to_order>*</to_order>
-                </country>
-                <telephone>
-                    <to_quote>*</to_quote>
-                </telephone>
-            </sales_convert_order>
-        </fieldsets>
         <models>
             <cartsguru>
                 <class>Cartsguru_Model</class>
@@ -50,12 +15,6 @@
             <cartsguru_resource>
                 <class>Cartsguru_Model_Resource</class>
             </cartsguru_resource>
-            <!--add rewrite base class for extend it -->
-            <sales>
-                <rewrite>
-                    <order_api_v2>Cartsguru_Model_Sales_Order_Api_V2</order_api_v2>
-                </rewrite>
-            </sales>
         </models>
         <blocks>
             <cartsguru>
@@ -169,17 +128,6 @@
             </customer_login>
         </events>
     </global>
-    <frontend>
-        <routers>
-            <webservice>
-                <use>standard</use>
-                <args>
-                    <frontName>webservice</frontName>
-                    <module>Cartsguru</module>
-                </args>
-            </webservice>
-        </routers>
-    </frontend>
     <adminhtml>
         <translate>
             <modules>
@@ -214,4 +162,15 @@
             </resources>
         </acl>
     </adminhtml>
+    <frontend>
+        <routers>
+            <cartsguru>
+                <use>standard</use>
+                <args>
+                    <module>Cartsguru</module>
+                    <frontName>cartsguru</frontName>
+                </args>
+            </cartsguru>
+        </routers>  
+    </frontend>
 </config>
