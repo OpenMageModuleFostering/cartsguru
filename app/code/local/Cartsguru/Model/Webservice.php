@@ -7,6 +7,7 @@
 class Cartsguru_Model_Webservice
 {
     private $apiBaseUrl = 'https://api.carts.guru';
+
     /**
      * If value is empty return ''
      * @param $value
@@ -123,9 +124,6 @@ class Cartsguru_Model_Webservice
         //Customer data
         $gender = ($order->getCustomerGender()) ? $order->getCustomerGender() : 'mister';
         $email = $order->getCustomerEmail();
-        if (!$accountId = $order->getCustomerId()) {
-            $accountId = $email;
-        }
         
         //Address
         $address = $order->getBillingAddress();
@@ -139,9 +137,9 @@ class Cartsguru_Model_Webservice
             'creationDate'  => $this->formatDate($order->getCreatedAt()),                       // Date of the order as string in json format
             'cartId'        => $order->getQuoteId(),                                            // Cart identifier, source of the order
             'totalET'       => (float)$order->getSubtotal(),                                    // Amount excluded taxes and excluded shipping
-            'totalATI'      => $this->getTotalATI($items),                                      // Amount included taxes and excluded shipping
+            'totalATI'      => (float)$order->getGrandTotal(),                                         // Paid amount
             'state'         => $order->getStatus(),                                             // raw order status
-            'accountId'     => $accountId,                                                      // Account id of the buyer
+            'accountId'     => $email,                                                      // Account id of the buyer
             'ip'            => $order->getRemoteIp(),                                           // User IP
             'civility'      => $this->notEmpty($gender),                                        // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($address->getLastname()),                        // Lastname of the buyer
@@ -177,9 +175,6 @@ class Cartsguru_Model_Webservice
         $lastname = $quote->getCustomerLastname();
         $firstname = $quote->getCustomerFirstname();
         $email = $quote->getCustomerEmail();
-        if (!$accountId = $quote->getCustomerId()) {
-            $accountId = $email;
-        }
         
         //Lookup for phone & country
         $customer = $quote->getCustomer();
@@ -223,7 +218,7 @@ class Cartsguru_Model_Webservice
         $items = $this->getItemsData($quote);
 
         //Check is valid
-        if (!$items || (!$accountId && (!$phone || !$email))) {
+        if (!$items) {
             return;
         }
 
@@ -236,7 +231,7 @@ class Cartsguru_Model_Webservice
             'totalET'       => (float)$quote->getSubtotal(),                    // Amount excluded taxes and excluded shipping
             'totalATI'      => $this->getTotalATI($items),                      // Amount included taxes and excluded shipping
             'ip'            => $quote->getRemoteIp(),                           // User IP
-            'accountId'     => $accountId,                                      // Account id of the buyer
+            'accountId'     => $email,                                      // Account id of the buyer
             'civility'      => $gender,                                         // Use string in this list : 'mister','madam','miss'
             'lastname'      => $this->notEmpty($lastname),                      // Lastname of the buyer
             'firstname'     => $this->notEmpty($firstname),                     // Firstname of the buyer
@@ -352,7 +347,7 @@ class Cartsguru_Model_Webservice
         $baseUrl = Mage::getBaseUrl() . 'api/rest';
         $fields = array(
             'plugin'                => 'magento',
-            'pluginVersion'         => '1.1.4',
+            'pluginVersion'         => '1.1.5',
             'storeVersion'          => Mage::getVersion()
         );
         $siteId = Mage::getStoreConfig('cartsguru/cartsguru_group/siteid', Mage::app()->getStore());
