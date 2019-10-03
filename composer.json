@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/cartsguru",
+    "name": "OpenMageModuleFostering\/cartsguru",
     "type": "magento-module",
     "license": "GPL",
     "homepage": "",
     "description": "The first targeted and automated follow-up solution for abandoned carts through phone and text message !",
     "authors": [
-    {
-        "name": "Maxime Pruvost",
-        "email": "maxime@carts.guru"
-    }
-],
+        {
+            "name": "Maxime Pruvost",
+            "email": "maxime@carts.guru"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
